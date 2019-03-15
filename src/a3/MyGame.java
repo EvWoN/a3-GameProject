@@ -1,0 +1,579 @@
+package a3;
+
+import myGameEngine.PointSystem;
+import myGameEngine.actions.*;
+import myGameEngine.controller.OrbitCameraController;
+import myGameEngine.controller.SquishyBounceController;
+import net.java.games.input.Component;
+import net.java.games.input.Controller;
+import ray.input.GenericInputManager;
+import ray.input.InputManager;
+import ray.rage.Engine;
+import ray.rage.asset.texture.Texture;
+import ray.rage.game.Game;
+import ray.rage.game.VariableFrameRateGame;
+import ray.rage.rendersystem.RenderSystem;
+import ray.rage.rendersystem.RenderWindow;
+import ray.rage.rendersystem.Renderable;
+import ray.rage.rendersystem.Renderable.Primitive;
+import ray.rage.rendersystem.Viewport;
+import ray.rage.rendersystem.gl4.GL4RenderSystem;
+import ray.rage.rendersystem.shader.GpuShaderProgram;
+import ray.rage.rendersystem.states.FrontFaceState;
+import ray.rage.rendersystem.states.RenderState;
+import ray.rage.rendersystem.states.TextureState;
+import ray.rage.scene.*;
+import ray.rage.scene.Camera.Frustum.Projection;
+import ray.rage.scene.controllers.RotationController;
+import ray.rage.util.BufferUtil;
+import ray.rml.Vector3f;
+
+import java.awt.*;
+import java.awt.event.KeyEvent;
+import java.io.IOException;
+import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
+import java.util.ArrayList;
+import java.util.Random;
+
+public class MyGame extends VariableFrameRateGame {
+
+	// to minimize variable allocation in update()
+	GL4RenderSystem rs;
+	InputManager im;
+	
+	//Controllers
+    RotationController rc;
+    SquishyBounceController sc;
+    
+    PointSystem ps;
+    
+    final int numOfPlanets = 15;
+    
+    OrbitCameraController p1CameraController;
+    OrbitCameraController p2CameraController;
+
+    public MyGame() {
+        super();
+		System.out.println("WIN by touching the most planets the fastest. Best of 15 planets.");
+		System.out.println("Player 1: Keyboard: WASD to move around, E/Q to strafe, SHIFT/CTRL for dive up and down, </> to zoom in and out, Arrow keys to look around");
+		System.out.println("Player 2: Controller: LEFT_STICK to move around, RIGHT_STICK to look around, Back Z_PEDALS to dive up and down, Buttons 4/5 to turn left and right, Buttons 1/2 to zoom in and out ");
+    }
+    
+    public static void main(String[] args) {
+        Game game = new MyGame();
+        try {
+            game.startup();
+            game.run();
+        } catch (Exception e) {
+            e.printStackTrace(System.err);
+        } finally {
+            game.shutdown();
+            game.exit();
+        }
+    }
+
+    @Override
+    protected void setupWindowViewports(RenderWindow rw) {
+        System.out.println("SetupWindowViewports");
+        rw.addKeyListener(this);
+        Viewport topViewport = rw.getViewport(0);
+        topViewport.setDimensions(.51f,.01f,.99f,.49f);
+        topViewport.setClearColor(new Color(.1f,.1f,.1f));
+        
+        Viewport bottomViewport = rw.createViewport(.01f,.01f,.99f,.49f);
+        bottomViewport.setClearColor(new Color(.1f,.1f,.1f));
+    }
+
+    @Override
+	protected void setupWindow(RenderSystem rs, GraphicsEnvironment ge) {
+        System.out.println("SetupWindow");
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        double screenPortion = 0.85; //mitigate taskbar in windowed mode
+        int width = (int) (screenSize.width*screenPortion);
+        int height = (int) (screenSize.height*screenPortion);
+        rs.createRenderWindow(new DisplayMode(width, height, 24, 60), false);
+	}
+
+	protected void setupControls(SceneManager sm){
+        System.out.println("SetupControls");
+        im = new GenericInputManager();
+        ArrayList<Controller> controllers = im.getControllers();
+        
+        //Player 1: Link and setup controls
+        Camera player1Camera = sm.getCamera("Player1Camera");
+        SceneNode p1DolphinNode = sm.getSceneNode("p1DolphinNode");
+        p1CameraController = new OrbitCameraController(player1Camera,player1Camera.getParentNode(),p1DolphinNode);
+        
+        //Player 2: Link and setup controls
+        Camera player2Camera = sm.getCamera("Player2Camera");
+        SceneNode p2DolphinNode = sm.getSceneNode("p2DolphinNode");
+        p2CameraController = new OrbitCameraController(player2Camera,player2Camera.getParentNode(),p2DolphinNode);
+        
+        
+        //Actions
+        MoveForwardAction moveForwardAction = new MoveForwardAction(p1DolphinNode);
+        MoveBackwardAction moveBackwardAction = new MoveBackwardAction(p1DolphinNode);
+        MoveRightAction moveRightAction = new MoveRightAction(p1DolphinNode);
+        MoveLeftAction moveLeftAction = new MoveLeftAction(p1DolphinNode);
+        RotateDownAction rotateDownAction = new RotateDownAction(p1DolphinNode);
+        RotateUpAction rotateUpAction = new RotateUpAction(p1DolphinNode);
+        RotateLeftAction rotateLeftAction = new RotateLeftAction(p1DolphinNode);
+        RotateRightAction rotateRightAction = new RotateRightAction(p1DolphinNode);
+        
+        for (Controller c : controllers) {
+            if (c.getType() == Controller.Type.KEYBOARD) {
+                im.associateAction(
+                        c,
+                        Component.Identifier.Key.W,
+                        moveForwardAction,
+                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
+                );
+                im.associateAction(
+                        c,
+                        Component.Identifier.Key.S,
+                        moveBackwardAction,
+                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
+                );
+                im.associateAction(
+                        c,
+                        Component.Identifier.Key.E,
+                        moveRightAction,
+                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
+                );
+                im.associateAction(
+                        c,
+                        Component.Identifier.Key.Q,
+                        moveLeftAction,
+                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
+                );
+                im.associateAction(
+                        c,
+                        Component.Identifier.Key.LCONTROL,
+                        rotateDownAction,
+                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
+                );
+                im.associateAction(
+                        c,
+                        Component.Identifier.Key.LSHIFT,
+                        rotateUpAction,
+                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
+                );
+                im.associateAction(
+                        c,
+                        Component.Identifier.Key.A,
+                        rotateLeftAction,
+                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
+                );
+                im.associateAction(
+                        c,
+                        Component.Identifier.Key.D,
+                        rotateRightAction,
+                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
+                );
+
+                p1CameraController.setupInput(im,c);
+            }
+        }
+        
+        moveBackwardAction = new MoveBackwardAction(p2DolphinNode);
+        moveRightAction = new MoveRightAction(p2DolphinNode);
+        rotateUpAction = new RotateUpAction(p2DolphinNode);
+        rotateLeftAction = new RotateLeftAction(p2DolphinNode);
+        rotateRightAction = new RotateRightAction(p2DolphinNode);
+        
+        for (Controller c : controllers) {
+            if (c.getType() == Controller.Type.GAMEPAD || c.getType() == Controller.Type.STICK) {
+                im.associateAction(
+                        c,
+                        Component.Identifier.Axis.Y,
+                        moveBackwardAction,
+                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
+                );
+                im.associateAction(
+                        c,
+                        Component.Identifier.Axis.X,
+                        moveRightAction,
+                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
+                );
+                im.associateAction(
+                        c,
+                        Component.Identifier.Axis.Z,
+                        rotateUpAction,
+                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
+                );
+                im.associateAction(
+                        c,
+                        Component.Identifier.Button._4,
+                        rotateLeftAction,
+                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
+                );
+                im.associateAction(
+                        c,
+                        Component.Identifier.Button._5,
+                        rotateRightAction,
+                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
+                );
+                p2CameraController.setupInput(im, c);
+            }
+        }
+    }
+
+    @Override
+    protected void setupCameras(SceneManager sm, RenderWindow rw) {
+        System.out.println("SetupCamera");
+        SceneNode rootNode = sm.getRootSceneNode();
+    
+        //Player 1 Camera
+        Camera p1Camera = sm.createCamera("Player1Camera", Projection.PERSPECTIVE);
+        rw.getViewport(0).setCamera(p1Camera);
+        SceneNode p1CameraNode = rootNode.createChildSceneNode(p1Camera.getName() + "Node");
+        p1CameraNode.attachObject(p1Camera);
+        p1Camera.setMode('n');
+        p1Camera.setRt((Vector3f)Vector3f.createFrom(1.0f, 0.0f, 0.0f));
+        p1Camera.setUp((Vector3f)Vector3f.createFrom(0.0f, 1.0f, 0.0f));
+        p1Camera.setFd((Vector3f)Vector3f.createFrom(0.0f, 0.0f, -1.0f));
+        p1Camera.setPo((Vector3f) Vector3f.createFrom(0f,0f,0f));
+
+        //Player 2 Camera
+        Camera p2Camera = sm.createCamera("Player2Camera", Projection.PERSPECTIVE);
+        rw.getViewport(1).setCamera(p2Camera);
+        SceneNode p2CameraNode = rootNode.createChildSceneNode(p2Camera.getName() + "Node");
+        p2CameraNode.attachObject(p2Camera);
+        p2Camera.setMode('n');
+        p2Camera.setRt((Vector3f)Vector3f.createFrom(1.0f, 0.0f, 0.0f));
+        p2Camera.setUp((Vector3f)Vector3f.createFrom(0.0f, 1.0f, 0.0f));
+        p2Camera.setFd((Vector3f)Vector3f.createFrom(0.0f, 0.0f, -1.0f));
+        p2Camera.setPo((Vector3f) Vector3f.createFrom(0f,0f,0f));
+    
+    }
+    
+    protected void initControllers(SceneManager sm){
+        sc = new SquishyBounceController();
+        rc = new RotationController(Vector3f.createUnitVectorY(), .1f);
+        sm.addController(rc);
+        sm.addController(sc);
+    }
+	
+    @Override
+    protected void setupScene(Engine eng, SceneManager sm) throws IOException {
+        System.out.println("SetupScene");
+
+        initControllers(sm);
+        
+        //p1Dolphin
+        Entity dolphinE_1 = sm.createEntity("p1Dolphin", "dolphinHighPoly.obj");
+        dolphinE_1.setPrimitive(Primitive.TRIANGLES);
+        SceneNode dolphinN_1 = sm.getRootSceneNode().createChildSceneNode(dolphinE_1.getName() + "Node");
+        dolphinN_1.moveRight(.5f);
+        dolphinN_1.attachObject(dolphinE_1);
+    
+        //p2Dolphin
+        Entity dolphinE_2 = sm.createEntity("p2Dolphin", "dolphinHighPoly.obj");
+        dolphinE_2.setPrimitive(Primitive.TRIANGLES);
+        SceneNode dolphinN_2 = sm.getRootSceneNode().createChildSceneNode(dolphinE_2.getName() + "Node");
+        dolphinN_2.moveLeft(.5f);
+        dolphinN_2.attachObject(dolphinE_2);
+        
+        //New texture for player two
+        Texture tex = eng.getTextureManager().getAssetByPath("DolphinPink_HighPolyUV.png");
+        TextureState texState = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
+        texState.setTexture(tex);
+        dolphinE_2.setRenderState(texState);
+        
+        //set up Setup Point system
+        ps = new PointSystem(dolphinN_1,rc,dolphinN_2,sc);
+        
+        //Scene axis
+        showAxis(eng,sm);
+    
+        //Ground floor
+        SceneNode groundFloor = makeGroundFloor(eng, sm);
+        groundFloor.moveDown(.5f);
+        groundFloor.scale(10f,10f,10f);
+    
+    
+        SceneNode planetsParentNode = sm.getRootSceneNode().createChildSceneNode("planetsCenterNode");
+        for (int i = 0; i < numOfPlanets; i++) {
+            SceneNode randPlanet = generateRandPlanet(eng, sm,planetsParentNode);
+            ps.addPointNode(randPlanet);
+        }
+
+        //Lighting
+        sm.getAmbientLight().setIntensity(new Color(.1f, .1f, .1f));
+		Light plight = sm.createLight("testLamp1", Light.Type.POINT);
+		plight.setAmbient(new Color(.5f, .5f, .5f));
+        plight.setDiffuse(new Color(.9f, .9f, .9f));
+		plight.setSpecular(new Color(1.0f, 1.0f, 1.0f));
+        plight.setRange(20f);
+		SceneNode plightNode = sm.getRootSceneNode().createChildSceneNode("plightNode");
+        plightNode.attachObject(plight);
+
+        setupControls(sm);
+    }
+
+    @Override
+    protected void update(Engine engine) {
+		// build and set HUD
+		rs = (GL4RenderSystem) engine.getRenderSystem();
+        int height = rs.getCanvas().getHeight();
+        
+        ps.updateScores();
+        String dispStr1 = "Score = " + ps.getP1Score();
+        String dispStr2 = "Score = " + ps.getP2Score();
+        
+        rs.setHUD(dispStr1, 20,height/2+20);
+		rs.setHUD2(dispStr2, 20, 20);
+		im.update(engine.getElapsedTimeMillis());
+		p1CameraController.updateCameraPosition();
+		p2CameraController.updateCameraPosition();
+	}
+
+	private void showAxis(Engine eng, SceneManager sm) throws IOException{
+        //lineX
+        ManualObject lineX = makeXIndicator(eng,sm);
+        lineX.setPrimitive(Primitive.LINES);
+        SceneNode lineXN = sm.getRootSceneNode().createChildSceneNode(lineX.getName() + "Node");
+        lineXN.attachObject(lineX);
+
+        //lineY
+        ManualObject lineY = makeYIndicator(eng,sm);
+        lineY.setPrimitive(Primitive.LINES);
+        SceneNode lineYN = sm.getRootSceneNode().createChildSceneNode(lineY.getName() + "Node");
+        lineYN.attachObject(lineY);
+
+        //lineZ
+        ManualObject lineZ = makeZIndicator(eng,sm);
+        lineZ.setPrimitive(Primitive.LINES);
+        SceneNode lineZN = sm.getRootSceneNode().createChildSceneNode(lineZ.getName() + "Node");
+        lineZN.attachObject(lineZ);
+    }
+
+    @Override
+    public void keyPressed(KeyEvent e) { }
+
+    private int PlanetNum = 0;
+
+    public SceneNode generateRandPlanet(Engine eng, SceneManager sm, Node parentNode) throws IOException {
+        //Basic attributes
+        float minDistance =1f, maxDistance =10f,  minSize = .1f,  maxSize = .2f;
+        Random r = new Random();
+
+        Entity planetE = sm.createEntity("myPlanet_" + PlanetNum++, "earth.obj");
+
+        //Set up texture
+        String textureName = "";
+        switch (r.nextInt(5)){
+            case 0:
+                textureName = "earth-day.jpeg";
+                break;
+            case 1:
+                textureName = "earth-night.jpeg";
+                break;
+            case 2:
+                textureName = "moon.jpeg";
+                break;
+            case 3:
+                textureName = "red.jpeg";
+                break;
+            case 4:
+                textureName = "sun.jpeg";
+                break;
+        }
+
+        planetE.setPrimitive(Primitive.TRIANGLES);
+        Texture tex = eng.getTextureManager().getAssetByPath(textureName);
+        TextureState texState = (TextureState)sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
+        texState.setTexture(tex);
+        planetE.setRenderState(texState);
+
+        //Build node into world
+        SceneNode planetN = sm.getRootSceneNode().createChildSceneNode(planetE.getName() + "Node");
+        planetN.attachObject(planetE);
+        parentNode.attachChild(planetN);
+
+        //Set Random distance from origin
+        float[] sizes = new float[3];
+        for (int i = 0; i < sizes.length; i++) {
+            float newDistance = minDistance + r.nextFloat() * (maxDistance - minDistance);
+            //Polarity
+            if(i != 1 && r.nextBoolean()){
+                newDistance = newDistance*-1;
+            }
+            sizes[i] = (newDistance);
+        }
+        planetN.setLocalPosition(sizes[0],sizes[1],sizes[2]);
+
+        //Generating random scale
+        float random = minSize + r.nextFloat() * (maxSize - minSize);
+        planetN.setLocalScale(random, random, random);
+        //Returning value
+        return planetN;
+    }
+    
+    private SceneNode makeGroundFloor(Engine eng, SceneManager sm) throws IOException{
+        ManualObject groundFloorObj = sm.createManualObject("groundFloor");
+        ManualObjectSection groundFloorSect = groundFloorObj.createManualSection("groundFloorSection");
+        groundFloorObj.setGpuShaderProgram(sm.getRenderSystem().getGpuShaderProgram(GpuShaderProgram.Type.RENDERING));
+
+        float[] vertices = new float[]{
+                5.0f, 0.0f, 5.0f, 5.0f, 0.0f, -5.0f, -5.0f, 0.0f, 5.0f,//tri`1
+                -5.0f, 0.0f, -5.0f, -5.0f, 0.0f, 5.0f, 5.0f, 0.0f, -5.0f//tri`2
+                
+        };
+        int[] indices = new int[]{0, 1, 2, 3, 4, 5};
+        groundFloorSect.setVertexBuffer(BufferUtil.directFloatBuffer(vertices));
+        groundFloorSect.setIndexBuffer(BufferUtil.directIntBuffer(indices));
+        //Texture
+        Texture tex = eng.getTextureManager().getAssetByPath("green.png");
+        TextureState texState = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
+        texState.setTexture(tex);
+        
+        FrontFaceState faceState = (FrontFaceState) sm.getRenderSystem().createRenderState(RenderState.Type.FRONT_FACE);
+        groundFloorObj.setDataSource(Renderable.DataSource.INDEX_BUFFER);
+        groundFloorObj.setRenderState(texState);
+        groundFloorObj.setRenderState(faceState);
+        groundFloorObj.setPrimitive(Primitive.TRIANGLES);
+        
+        
+        SceneNode groundFloorNode = sm.getRootSceneNode().createChildSceneNode(groundFloorObj.getName() + "Node");
+        groundFloorNode.attachObject(groundFloorObj);
+        
+        return groundFloorNode;
+    }
+
+    public ManualObject makeXIndicator(Engine eng, SceneManager sm) throws IOException{
+        ManualObject lineX = sm.createManualObject("xLine");
+        ManualObjectSection lineXSect = lineX.createManualSection("xLineSection");
+        lineX.setGpuShaderProgram(sm.getRenderSystem().getGpuShaderProgram(GpuShaderProgram.Type.RENDERING));
+
+        float[] vertices = new float[]{
+                0.0f, 0.0f, 0.0f, //origin
+                5.0f, 0.0f, 0.0f, //X-Axis
+                };
+        int[] indices = new int[] {0,1};
+        IntBuffer indexBuf = BufferUtil.directIntBuffer(indices);
+
+        FloatBuffer vertBuffer = BufferUtil.directFloatBuffer(vertices);
+
+        lineXSect.setVertexBuffer(vertBuffer);
+        lineXSect.setIndexBuffer(indexBuf);
+
+        Texture tex = eng.getTextureManager().getAssetByPath("red.jpeg");
+        TextureState texState = (TextureState)sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
+        texState.setTexture(tex);
+        FrontFaceState faceState = (FrontFaceState) sm.getRenderSystem().createRenderState(RenderState.Type.FRONT_FACE);
+
+        lineX.setDataSource(Renderable.DataSource.INDEX_BUFFER);
+        lineX.setRenderState(texState);
+        lineX.setRenderState(faceState);
+        return lineX;
+    }
+
+    public ManualObject makeYIndicator(Engine eng, SceneManager sm) throws IOException{
+        ManualObject lineX = sm.createManualObject("yLine");
+        ManualObjectSection lineXSect = lineX.createManualSection("yLineSection");
+        lineX.setGpuShaderProgram(sm.getRenderSystem().getGpuShaderProgram(GpuShaderProgram.Type.RENDERING));
+
+        float[] vertices = new float[]{
+                0.0f, 0.0f, 0.0f, //origin
+                0.0f, 5.0f, 0.0f, //Z-Axis
+        };
+        int[] indices = new int[] {0,1};
+        IntBuffer indexBuf = BufferUtil.directIntBuffer(indices);
+
+        FloatBuffer vertBuffer = BufferUtil.directFloatBuffer(vertices);
+
+
+        lineXSect.setVertexBuffer(vertBuffer);
+        lineXSect.setIndexBuffer(indexBuf);
+
+        Texture tex = eng.getTextureManager().getAssetByPath("green.png");
+        TextureState texState = (TextureState)sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
+        texState.setTexture(tex);
+        FrontFaceState faceState = (FrontFaceState) sm.getRenderSystem().createRenderState(RenderState.Type.FRONT_FACE);
+
+        lineX.setDataSource(Renderable.DataSource.INDEX_BUFFER);
+        lineX.setRenderState(texState);
+        lineX.setRenderState(faceState);
+        return lineX;
+    }
+
+    public ManualObject makeZIndicator(Engine eng, SceneManager sm) throws IOException{
+        ManualObject lineX = sm.createManualObject("zLine");
+        ManualObjectSection lineXSect = lineX.createManualSection("zLineSection");
+        lineX.setGpuShaderProgram(sm.getRenderSystem().getGpuShaderProgram(GpuShaderProgram.Type.RENDERING));
+
+        float[] vertices = new float[]{
+                0.0f, 0.0f, 0.0f, //origin
+                0.0f, 0.0f, 5.0f, //Y-Axis
+        };
+        int[] indices = new int[] {0,1};
+        IntBuffer indexBuf = BufferUtil.directIntBuffer(indices);
+
+        FloatBuffer vertBuffer = BufferUtil.directFloatBuffer(vertices);
+
+        lineXSect.setVertexBuffer(vertBuffer);
+        lineXSect.setIndexBuffer(indexBuf);
+
+        Texture tex = eng.getTextureManager().getAssetByPath("blue.jpeg");
+        TextureState texState = (TextureState)sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
+        texState.setTexture(tex);
+        FrontFaceState faceState = (FrontFaceState) sm.getRenderSystem().createRenderState(RenderState.Type.FRONT_FACE);
+
+        lineX.setDataSource(Renderable.DataSource.INDEX_BUFFER);
+        lineX.setRenderState(texState);
+        lineX.setRenderState(faceState);
+        return lineX;
+    }
+
+    protected ManualObject makePyramid(Engine eng, SceneManager sm) throws IOException {
+        ManualObject pyr = sm.createManualObject("Pyramid");
+        ManualObjectSection pyrSec =
+                pyr.createManualSection("PyramidSection");
+        pyr.setGpuShaderProgram(sm.getRenderSystem().
+                getGpuShaderProgram(GpuShaderProgram.Type.RENDERING));
+        float[] vertices = new float[]
+                {-1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f, //front
+                        1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f, //right
+                        1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f, //back
+                        -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f, //left
+                        -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, //LF
+                        1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f //RR
+                };
+        float[] texcoords = new float[]
+                {0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
+                        0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
+                        0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
+                        0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
+                        0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+                        1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f
+                };
+        float[] normals = new float[]
+                {0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f,
+                        1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f,
+                        0.0f, 1.0f, -1.0f, 0.0f, 1.0f, -1.0f, 0.0f, 1.0f, -1.0f,
+                        -1.0f, 1.0f, 0.0f, -1.0f, 1.0f, 0.0f, -1.0f, 1.0f, 0.0f,
+                        0.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f,
+                        0.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f
+                };
+        int[] indices = new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17};
+        FloatBuffer vertBuf = BufferUtil.directFloatBuffer(vertices);
+        FloatBuffer texBuf = BufferUtil.directFloatBuffer(texcoords);
+        FloatBuffer normBuf = BufferUtil.directFloatBuffer(normals);
+        IntBuffer indexBuf = BufferUtil.directIntBuffer(indices);
+        pyrSec.setVertexBuffer(vertBuf);
+        pyrSec.setTextureCoordsBuffer(texBuf);
+        pyrSec.setNormalsBuffer(normBuf);
+        pyrSec.setIndexBuffer(indexBuf);
+        Texture tex = eng.getTextureManager().getAssetByPath("chain-fence.jpeg");
+        TextureState texState = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
+        texState.setTexture(tex);
+        FrontFaceState faceState = (FrontFaceState) sm.getRenderSystem().
+                createRenderState(RenderState.Type.FRONT_FACE);
+        pyr.setDataSource(Renderable.DataSource.INDEX_BUFFER);
+        pyr.setRenderState(texState);
+        pyr.setRenderState(faceState);
+        return pyr;
+    }
+}
