@@ -12,6 +12,7 @@ import ray.input.InputManager;
 import ray.networking.IGameConnection;
 import ray.rage.Engine;
 import ray.rage.asset.texture.Texture;
+import ray.rage.asset.texture.TextureManager;
 import ray.rage.game.Game;
 import ray.rage.game.VariableFrameRateGame;
 import ray.rage.rendersystem.RenderSystem;
@@ -29,10 +30,13 @@ import ray.rage.scene.Camera.Frustum.Projection;
 import ray.rage.scene.controllers.RotationController;
 import ray.rage.util.BufferUtil;
 import ray.rml.Vector3;
+import ray.rage.util.Configuration;
+import ray.rml.Radianf;
 import ray.rml.Vector3f;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
+import java.awt.geom.AffineTransform;
 import java.io.IOException;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
@@ -52,7 +56,7 @@ public class MyGame extends VariableFrameRateGame {
     private ProtocolClient protClient;
     private boolean isClientConnected;
     private List<UUID> gameObjectsToRemove;
-	
+
 	//Controllers
     RotationController rc;
     SquishyBounceController sc;
@@ -257,7 +261,6 @@ public class MyGame extends VariableFrameRateGame {
         p2Camera.setUp((Vector3f)Vector3f.createFrom(0.0f, 1.0f, 0.0f));
         p2Camera.setFd((Vector3f)Vector3f.createFrom(0.0f, 0.0f, -1.0f));
         p2Camera.setPo((Vector3f) Vector3f.createFrom(0f,0f,0f));
-    
     }
     
     protected void initControllers(SceneManager sm){
@@ -304,7 +307,8 @@ public class MyGame extends VariableFrameRateGame {
         groundFloor.moveDown(.5f);
         groundFloor.scale(10f,10f,10f);
     
-    
+
+        //Make planets
         SceneNode planetsParentNode = sm.getRootSceneNode().createChildSceneNode("planetsCenterNode");
         for (int i = 0; i < numOfPlanets; i++) {
             SceneNode randPlanet = generateRandPlanet(eng, sm,planetsParentNode);
@@ -321,7 +325,56 @@ public class MyGame extends VariableFrameRateGame {
 		SceneNode plightNode = sm.getRootSceneNode().createChildSceneNode("plightNode");
         plightNode.attachObject(plight);
 
+        //Make Skybox
+        SkyBox startBox = makeSkyBox("red");
+
+        sm.setActiveSkyBox(startBox);
+
         setupControls(sm);
+    }
+
+    //Path should be a string denoting the folder within "skyboxes" that holds the front, back, left, right, etc.
+    //If you have a sub-folder "red" inside of "skyboxes" the path should be "red"
+    //If it is multiple folders deep, do not include the last "/" ie "space/galaxies/red"
+    private SkyBox makeSkyBox(String path) throws IOException
+    {
+        //Skybox software liscensed freely from https://github.com/wwwtyro/space-3d/blob/gh-pages/LICENSE
+        Engine eng = getEngine();
+        SceneManager sm = eng.getSceneManager();
+        Configuration conf = eng.getConfiguration();
+        TextureManager textureManager = eng.getTextureManager();
+        textureManager.setBaseDirectoryPath(conf.valueOf("assets.skyboxes.path"));
+        Texture front, back, left, right, top, bottom;
+        front = textureManager.getAssetByPath("/front.png");
+        back = textureManager.getAssetByPath("/back.png");
+        left = textureManager.getAssetByPath("/left.png");
+        right = textureManager.getAssetByPath("/right.png");
+        top = textureManager.getAssetByPath("/top.png");
+        bottom = textureManager.getAssetByPath("/bottom.png");
+        textureManager.setBaseDirectoryPath(conf.valueOf("assets.textures.path"));
+
+        //Flipping the textures, as they're upside down by default.
+        AffineTransform transform = new AffineTransform();
+        AffineTransform xform;
+        transform.translate(0, front.getImage().getHeight());
+        transform.scale(1d, -1d);
+
+        front.transform(transform);
+        back.transform(transform);
+        left.transform(transform);
+        right.transform(transform);
+        top.transform(transform);
+        bottom.transform(transform);
+
+        SkyBox skyBox = sm.createSkyBox("SkyBox");
+        skyBox.setTexture(front, SkyBox.Face.FRONT);
+        skyBox.setTexture(back, SkyBox.Face.BACK);
+        skyBox.setTexture(left, SkyBox.Face.LEFT);
+        skyBox.setTexture(right, SkyBox.Face.RIGHT);
+        skyBox.setTexture(top, SkyBox.Face.TOP);
+        skyBox.setTexture(bottom, SkyBox.Face.BOTTOM);
+
+        return skyBox;
     }
 
     @Override
