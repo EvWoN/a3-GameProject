@@ -1,5 +1,6 @@
 package a3;
 
+import myGameEngine.Networking.ProtocolClient;
 import myGameEngine.PointSystem;
 import myGameEngine.actions.*;
 import myGameEngine.controller.OrbitCameraController;
@@ -8,6 +9,7 @@ import net.java.games.input.Component;
 import net.java.games.input.Controller;
 import ray.input.GenericInputManager;
 import ray.input.InputManager;
+import ray.networking.IGameConnection;
 import ray.rage.Engine;
 import ray.rage.asset.texture.Texture;
 import ray.rage.game.Game;
@@ -26,6 +28,7 @@ import ray.rage.scene.*;
 import ray.rage.scene.Camera.Frustum.Projection;
 import ray.rage.scene.controllers.RotationController;
 import ray.rage.util.BufferUtil;
+import ray.rml.Vector3;
 import ray.rml.Vector3f;
 
 import java.awt.*;
@@ -34,13 +37,21 @@ import java.io.IOException;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
+import java.util.UUID;
 
 public class MyGame extends VariableFrameRateGame {
 
 	// to minimize variable allocation in update()
 	GL4RenderSystem rs;
 	InputManager im;
+    private String serverAddress;
+    private int serverPort;
+    private IGameConnection.ProtocolType serverProtocol;
+    private ProtocolClient protClient;
+    private boolean isClientConnected;
+    private List<UUID> gameObjectsToRemove;
 	
 	//Controllers
     RotationController rc;
@@ -58,6 +69,7 @@ public class MyGame extends VariableFrameRateGame {
 		System.out.println("WIN by touching the most planets the fastest. Best of 15 planets.");
 		System.out.println("Player 1: Keyboard: WASD to move around, E/Q to strafe, SHIFT/CTRL for dive up and down, </> to zoom in and out, Arrow keys to look around");
 		System.out.println("Player 2: Controller: LEFT_STICK to move around, RIGHT_STICK to look around, Back Z_PEDALS to dive up and down, Buttons 4/5 to turn left and right, Buttons 1/2 to zoom in and out ");
+
     }
     
     public static void main(String[] args) {
@@ -575,5 +587,13 @@ public class MyGame extends VariableFrameRateGame {
         pyr.setRenderState(texState);
         pyr.setRenderState(faceState);
         return pyr;
+    }
+
+    public void setIsConnected(boolean b) {
+
+    }
+
+    public Vector3 getPlayerPosition() {
+        return null;
     }
 }
