@@ -31,13 +31,20 @@ import ray.rage.util.Configuration;
 import ray.rml.Radianf;
 import ray.rml.Vector3f;
 
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineFactory;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.geom.AffineTransform;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 public class MyGame extends VariableFrameRateGame {
@@ -51,8 +58,6 @@ public class MyGame extends VariableFrameRateGame {
     SquishyBounceController sc;
     
     PointSystem ps;
-    
-    final int numOfPlanets = 15;
     
     OrbitCameraController p1CameraController;
     OrbitCameraController p2CameraController;
@@ -262,6 +267,11 @@ public class MyGame extends VariableFrameRateGame {
     protected void setupScene(Engine eng, SceneManager sm) throws IOException {
         System.out.println("SetupScene");
 
+        ScriptEngineManager scriptManager = new ScriptEngineManager();
+        String scriptName = "PlanetGen.js";
+        List<ScriptEngineFactory> scriptList = scriptManager.getEngineFactories();
+        ScriptEngine scriptEngine = scriptManager.getEngineByName("js");
+
         initControllers(sm);
         
         //p1Dolphin
@@ -298,6 +308,9 @@ public class MyGame extends VariableFrameRateGame {
 
         //Make planets
         SceneNode planetsParentNode = sm.getRootSceneNode().createChildSceneNode("planetsCenterNode");
+
+        runScript(scriptEngine, scriptName);
+        int numOfPlanets = (int) scriptEngine.get("numPlanets");
         for (int i = 0; i < numOfPlanets; i++) {
             SceneNode randPlanet = generateRandPlanet(eng, sm,planetsParentNode);
             ps.addPointNode(randPlanet);
@@ -321,6 +334,18 @@ public class MyGame extends VariableFrameRateGame {
         setupControls(sm);
     }
 
+    private void runScript(ScriptEngine engine, String fileName)
+    {
+        try
+        {
+            FileReader fr = new FileReader("scripts/" + fileName);
+            engine.eval(fr);
+            fr.close();
+        }
+        catch(IOException io) { System.out.println("File \"" + fileName + "\" not found."); }
+        catch(ScriptException s) { System.out.println("Script error"); }
+    }
+
     //Path should be a string denoting the folder within "skyboxes" that holds the front, back, left, right, etc.
     //If you have a sub-folder "red" inside of "skyboxes" the path should be "red"
     //If it is multiple folders deep, do not include the last "/" ie "space/galaxies/red"
@@ -333,12 +358,12 @@ public class MyGame extends VariableFrameRateGame {
         TextureManager textureManager = eng.getTextureManager();
         textureManager.setBaseDirectoryPath(conf.valueOf("assets.skyboxes.path"));
         Texture front, back, left, right, top, bottom;
-        front = textureManager.getAssetByPath("/front.png");
-        back = textureManager.getAssetByPath("/back.png");
-        left = textureManager.getAssetByPath("/left.png");
-        right = textureManager.getAssetByPath("/right.png");
-        top = textureManager.getAssetByPath("/top.png");
-        bottom = textureManager.getAssetByPath("/bottom.png");
+        front = textureManager.getAssetByPath(path + "/front.png");
+        back = textureManager.getAssetByPath(path + "/back.png");
+        left = textureManager.getAssetByPath(path + "/left.png");
+        right = textureManager.getAssetByPath(path + "/right.png");
+        top = textureManager.getAssetByPath(path + "/top.png");
+        bottom = textureManager.getAssetByPath(path + "/bottom.png");
         textureManager.setBaseDirectoryPath(conf.valueOf("assets.textures.path"));
 
         //Flipping the textures, as they're upside down by default.
