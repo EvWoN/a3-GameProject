@@ -1,0 +1,1 @@
+var numPlanets = 8;
