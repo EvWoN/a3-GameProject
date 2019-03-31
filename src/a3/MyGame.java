@@ -673,4 +673,8 @@ public class MyGame extends VariableFrameRateGame {
     public Vector3 getPlayerPosition() {
         return null;
     }
+
+    public Vector3 getPlayerHeading() {
+        return null;
+    }
 }
