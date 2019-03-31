@@ -732,16 +732,15 @@ public class MyGame extends VariableFrameRateGame {
         return null;
     }
 
-<<<<<<< Updated upstream
-    public Vector3 getPlayerHeading() {
+    public GhostAvatar updateGhostAvatar(UUID uuid, Vector3 position, Vector3 heading){
         return null;
-=======
+    }
+
     public boolean updateGhostAvatar(GhostAvatar avatar){
         return true;
     }
 
     public boolean removeGhostAvatar(GhostAvatar avatar){
         return true;
->>>>>>> Stashed changes
     }
 }
