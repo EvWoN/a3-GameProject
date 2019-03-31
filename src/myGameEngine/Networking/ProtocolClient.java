@@ -7,19 +7,21 @@ import ray.rml.Vector3f;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.HashMap;
 import java.util.UUID;
 import java.util.Vector;
 
 public class ProtocolClient extends GameConnectionClient {
     private MyGame game;
     private UUID id;
-    private Vector<GhostAvatar> ghostAvatars;
+    //private Vector<GhostAvatar> ghostAvatars;
+    private HashMap<UUID, GhostAvatar> ghostAvatars;
 
     public ProtocolClient(InetAddress remAddr, int remPort, ProtocolType pType, MyGame game) throws IOException {
         super(remAddr, remPort, pType);
         this.game = game;
         this.id = UUID.randomUUID();
-        this.ghostAvatars = new Vector<GhostAvatar>();
+        this.ghostAvatars = new HashMap<>();
     }
 
     @Override
@@ -87,20 +89,24 @@ public class ProtocolClient extends GameConnectionClient {
                 sendDetailsForMessage(clientId, game.getPlayerPosition(), game.getPlayerHeading());
             }
             // rec. “move...”
-            // formate: move, clientid, x, y, z
+            // formate: move, clientid, x, y, z, u, v, n
             if (msgTokens[0].compareTo("move") == 0)
             { sendMoveMessage(game.getPlayerPosition(), game.getPlayerHeading()); }
         }
     }
 
     private void createGhostAvatar(UUID ghostID, Vector3 ghostPosition, Vector3 ghostHeading) throws IOException {
-
+        //ghostAvatars.add(game.createGhostAvatar(ghostID, ghostPosition, ghostHeading));
+        ghostAvatars.put(ghostID, game.createGhostAvatar(ghostID, ghostPosition, ghostHeading));
     }
 
     private void updateGhostAvatar(UUID ghostID, Vector3 ghostPosition, Vector3 ghostHeading) throws IOException {
+        GhostAvatar ghostAvatar = ghostAvatars.get(ghostID);
+        game.updateGhostAvatar(ghostAvatar, ghostPosition, ghostHeading);
     }
 
     private void removeGhostAvatar(UUID ghostID) throws IOException {
+        game.removeGhostAvatar(ghostAvatars.get(ghostID));
     }
 
 
