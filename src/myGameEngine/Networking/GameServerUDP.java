@@ -1,10 +1,8 @@
 package myGameEngine.Networking;
 
-import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 import ray.networking.server.GameConnectionServer;
 import ray.networking.server.IClientInfo;
 
-import javax.script.ScriptEngine;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.UUID;
@@ -25,7 +23,10 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
                 try {
                     IClientInfo ci;
                     ci = getServerSocket().createClientInfo(senderIP, senderPort);
+
                     UUID clientID = UUID.fromString(msgTokens[1]);
+
+                    System.out.println("Client connected, UUID: " + clientID);
                     addClient(ci, clientID);
                     sendJoinedMessage(clientID, true);
                 } catch (IOException e) {

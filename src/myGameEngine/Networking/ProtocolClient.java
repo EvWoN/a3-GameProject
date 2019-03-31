@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.UUID;
-import java.util.Vector;
 
 public class ProtocolClient extends GameConnectionClient {
     private MyGame game;
@@ -96,7 +95,6 @@ public class ProtocolClient extends GameConnectionClient {
     }
 
     private void createGhostAvatar(UUID ghostID, Vector3 ghostPosition, Vector3 ghostHeading) throws IOException {
-        //ghostAvatars.add(game.createGhostAvatar(ghostID, ghostPosition, ghostHeading));
         ghostAvatars.put(ghostID, game.createGhostAvatar(ghostID, ghostPosition, ghostHeading));
     }
 

@@ -53,6 +53,7 @@ import java.util.List;
 public class MyGame extends VariableFrameRateGame {
 
     // to minimize variable allocation in update()
+    private Engine eng;
     private GL4RenderSystem rs;
     private InputManager im;
     private SceneManager sm;
@@ -60,7 +61,7 @@ public class MyGame extends VariableFrameRateGame {
     private int serverPort;
     private IGameConnection.ProtocolType serverProtocol;
     private ProtocolClient protClient;
-    private boolean isClientConnected;
+    public boolean isClientConnected;
     private List<UUID> gameObjectsToRemove;
 
     //Controllers
@@ -103,8 +104,11 @@ public class MyGame extends VariableFrameRateGame {
         gameObjectsToRemove = new LinkedList<UUID>();
         isClientConnected = false;
         try {
-            protClient = new ProtocolClient(InetAddress.
+            System.out.println("Networking is being set up");
+            this.protClient = new ProtocolClient(InetAddress.
                     getByName(serverAddress), serverPort, serverProtocol, this);
+            System.out.println(protClient);
+
         } catch (UnknownHostException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -115,6 +119,8 @@ public class MyGame extends VariableFrameRateGame {
         } else { // ask client protocol to send initial join message
             //to server, with a unique identifier for this client
             protClient.sendJoinMessage();
+            //TODO - boolean return on join
+            isClientConnected = true;
         }
     }
 
@@ -130,13 +136,14 @@ public class MyGame extends VariableFrameRateGame {
 
         rs.setHUD(dispStr1, 20, height / 2 + 20);
         rs.setHUD2(dispStr2, 20, 20);
-        im.update(engine.getElapsedTimeMillis());
+        float elapsedTimeMillis = engine.getElapsedTimeMillis();
+        im.update(elapsedTimeMillis);
         p1CameraController.updateCameraPosition();
         p2CameraController.updateCameraPosition();
 
 
         //Networking, process packets
-        processNetworking(elapsTime);
+        processNetworking(elapsedTimeMillis);
     }
 
     protected void processNetworking(float elapsTime) { // Process packets received by the client from the server
@@ -189,7 +196,7 @@ public class MyGame extends VariableFrameRateGame {
 
 
         //Actions
-        MoveForwardAction moveForwardAction = new MoveForwardAction(p1DolphinNode);
+        MoveForwardAction moveForwardAction = new MoveForwardAction(p1DolphinNode,protClient);
         MoveBackwardAction moveBackwardAction = new MoveBackwardAction(p1DolphinNode);
         MoveRightAction moveRightAction = new MoveRightAction(p1DolphinNode);
         MoveLeftAction moveLeftAction = new MoveLeftAction(p1DolphinNode);
@@ -336,6 +343,9 @@ public class MyGame extends VariableFrameRateGame {
         System.out.println("SetupScene");
 
         this.sm = sm;
+        this.eng = eng;
+
+        setupNetworking();
 
         ScriptEngineManager scriptManager = new ScriptEngineManager();
         String scriptName = "PlanetGen.js";
@@ -737,15 +747,33 @@ public class MyGame extends VariableFrameRateGame {
         return null;
     }
 
-    public GhostAvatar createGhostAvatar(UUID uuid, Vector3 position, Vector3 heading){
-        return null;
+    public GhostAvatar createGhostAvatar(UUID uuid, Vector3 position, Vector3 heading) throws IOException {
+        //Player
+        Entity dolphinE_2 = sm.createEntity("p2Dolphin" + uuid.toString(), "dolphinHighPoly.obj");
+        SceneNode dolphinN_2 = sm.getRootSceneNode().createChildSceneNode(dolphinE_2.getName() + "Node");
+
+        dolphinE_2.setPrimitive(Primitive.TRIANGLES);
+        dolphinN_2.attachObject(dolphinE_2);
+
+        Texture tex = eng.getTextureManager().getAssetByPath("DolphinPink_HighPolyUV.png");
+        TextureState texState = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
+        texState.setTexture(tex);
+        dolphinE_2.setRenderState(texState);
+
+        GhostAvatar ghostAvatar = new GhostAvatar(uuid, dolphinN_2, dolphinE_2);
+        ghostAvatar.setPosition(position);
+        ghostAvatar.setHeading(heading);
+        return ghostAvatar;
     }
 
     public boolean updateGhostAvatar(GhostAvatar avatar, Vector3 position, Vector3 heading){
-        return true;
+        avatar.setPosition(position);
+        avatar.setHeading(heading);
+        return avatar.getNode().isInSceneGraph();
     }
 
-    public boolean removeGhostAvatar(GhostAvatar avatar){
-        return true;
+    public void removeGhostAvatar(GhostAvatar avatar){
+        sm.destroySceneNode(avatar.getNode());
     }
+
 }
