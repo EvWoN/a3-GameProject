@@ -21,11 +21,14 @@ public class ProtocolClient extends GameConnectionClient {
         this.game = game;
         this.id = UUID.randomUUID();
         this.ghostAvatars = new HashMap<>();
+        
+        System.out.println("I AM UUID: " + id);
     }
 
     @Override
     protected void processPacket(Object o) {
         String message = (String) o;
+        System.out.println("Receiving packet: " + o);
         String[] msgTokens = message.split(",");
         if (msgTokens.length > 0) {
             // receive “join”
@@ -34,7 +37,6 @@ public class ProtocolClient extends GameConnectionClient {
             {
                 if (msgTokens[1].compareTo("success") == 0) {
                     game.setIsConnected(true);
-                    sendJoinMessage();
                     sendCreateMessage(game.getPlayerPosition(), game.getPlayerHeading());
                 }
                 if (msgTokens[1].compareTo("failure") == 0) {
@@ -61,7 +63,9 @@ public class ProtocolClient extends GameConnectionClient {
                         Float.parseFloat(msgTokens[6]),
                         Float.parseFloat(msgTokens[7]),
                         Float.parseFloat(msgTokens[8]));
-                try { updateGhostAvatar(ghostID, ghostPosition, ghostHeading); }
+                try {
+                    updateGhostAvatar(ghostID, ghostPosition, ghostHeading);
+                }
                 catch (IOException e) { System.out.println("Error updating ghost avatar"); }
             }
             // receive “create…”
@@ -77,7 +81,7 @@ public class ProtocolClient extends GameConnectionClient {
                         Float.parseFloat(msgTokens[5]),
                         Float.parseFloat(msgTokens[6]),
                         Float.parseFloat(msgTokens[7]));
-                try { createGhostAvatar(ghostID, ghostPosition, ghostHeading); }
+                try { updateGhostAvatar(ghostID, ghostPosition, ghostHeading); }
                 catch (IOException e) { System.out.println("Error creating ghost avatar"); }
             }
             // rec. “wants…”
@@ -89,18 +93,34 @@ public class ProtocolClient extends GameConnectionClient {
             }
             // rec. “move...”
             // formate: move, clientid, x, y, z, u, v, n
-            if (msgTokens[0].compareTo("move") == 0)
-            { sendMoveMessage(game.getPlayerPosition(), game.getPlayerHeading()); }
+            if (msgTokens[0].compareTo("move") == 0) {
+                UUID ghostID = UUID.fromString(msgTokens[1]);
+                Vector3 ghostPosition = Vector3f.createFrom(
+                        Float.parseFloat(msgTokens[2]),
+                        Float.parseFloat(msgTokens[3]),
+                        Float.parseFloat(msgTokens[4]));
+                Vector3 ghostHeading = Vector3f.createFrom(
+                        Float.parseFloat(msgTokens[5]),
+                        Float.parseFloat(msgTokens[6]),
+                        Float.parseFloat(msgTokens[7]));
+                try { updateGhostAvatar(ghostID, ghostPosition, ghostHeading); }
+                catch (IOException e) { System.out.println("Error updating move ghost avatar"); }
+            }
         }
     }
 
-    private void createGhostAvatar(UUID ghostID, Vector3 ghostPosition, Vector3 ghostHeading) throws IOException {
-        ghostAvatars.put(ghostID, game.createGhostAvatar(ghostID, ghostPosition, ghostHeading));
-    }
+//    private void createGhostAvatar(UUID ghostID, Vector3 ghostPosition, Vector3 ghostHeading) throws IOException {
+//        ghostAvatars.put(ghostID, game.createGhostAvatar(ghostID, ghostPosition, ghostHeading));
+//    }
 
     private void updateGhostAvatar(UUID ghostID, Vector3 ghostPosition, Vector3 ghostHeading) throws IOException {
-        GhostAvatar ghostAvatar = ghostAvatars.get(ghostID);
-        game.updateGhostAvatar(ghostAvatar, ghostPosition, ghostHeading);
+        if (ghostAvatars.containsKey(ghostID)) {
+            System.out.println("Ghost Received: " + ghostID + "\nHashtable on ghost update: " + ghostAvatars);
+            GhostAvatar ghostAvatar = ghostAvatars.get(ghostID);
+            game.updateGhostAvatar(ghostAvatar, ghostPosition, ghostHeading);
+        } else {
+            ghostAvatars.put(ghostID, game.createGhostAvatar(ghostID, ghostPosition, ghostHeading));
+        }
     }
 
     private void removeGhostAvatar(UUID ghostID) throws IOException {

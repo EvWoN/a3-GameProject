@@ -52,4 +52,9 @@ public class GhostAvatar {
         Matrix3 mult = rotationFrom.toMatrix3().mult(node.getLocalRotation());
         node.setLocalRotation(mult);
     }
+    
+    @Override
+    public String toString() {
+        return "Obj: Ghost Avatar of UUID: " + id;
+    }
 }

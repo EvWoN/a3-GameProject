@@ -118,6 +118,7 @@ public class MyGame extends VariableFrameRateGame {
             System.out.println("missing protocol host");
         } else { // ask client protocol to send initial join message
             //to server, with a unique identifier for this client
+            System.out.println("Trying to join");
             protClient.sendJoinMessage();
             //TODO - boolean return on join
             isClientConnected = true;
@@ -733,22 +734,9 @@ public class MyGame extends VariableFrameRateGame {
         return player1.getWorldForwardAxis();
     }
 
-    public GhostAvatar addGhostAvatar(UUID uuid, Vector3 pos, Vector3 heading) throws IOException {
-//        if (avatar != null) {
-//            Entity ghostE = sm.createEntity("ghost", "whatever.obj");
-//            ghostE.setPrimitive(Primitive.TRIANGLES);
-//            SceneNode ghostN = sm.getRootSceneNode().createChildSceneNode(avatar.getID().toString());
-//            ghostN.attachObject(ghostE);
-//            avatar.getPos
-//            avatar.setNode(ghostN);
-//            avatar.setEntity(ghostE);
-//            avatar.setPosition(node’s position...maybe redundant);
-//        }
-        return null;
-    }
-
     public GhostAvatar createGhostAvatar(UUID uuid, Vector3 position, Vector3 heading) throws IOException {
         //Player
+
         Entity dolphinE_2 = sm.createEntity("p2Dolphin" + uuid.toString(), "dolphinHighPoly.obj");
         SceneNode dolphinN_2 = sm.getRootSceneNode().createChildSceneNode(dolphinE_2.getName() + "Node");
 
@@ -763,10 +751,14 @@ public class MyGame extends VariableFrameRateGame {
         GhostAvatar ghostAvatar = new GhostAvatar(uuid, dolphinN_2, dolphinE_2);
         ghostAvatar.setPosition(position);
         ghostAvatar.setHeading(heading);
+    
+        System.out.println("Ghost is being created: " + ghostAvatar + " Node:" + dolphinN_2.toString());
         return ghostAvatar;
     }
 
     public boolean updateGhostAvatar(GhostAvatar avatar, Vector3 position, Vector3 heading){
+        System.out.println("\\u003B[31mAVATAR:\\u003B[0m" + avatar + " POSI:" + position + " HEADING:" + heading);
+        System.out.println("Avatar is in scene? " + avatar.getNode().isInSceneGraph());
         avatar.setPosition(position);
         avatar.setHeading(heading);
         return avatar.getNode().isInSceneGraph();

@@ -4,6 +4,7 @@ import ray.networking.server.GameConnectionServer;
 import ray.networking.server.IClientInfo;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.InetAddress;
 import java.util.UUID;
 
@@ -19,6 +20,7 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
         if (msgTokens.length > 0) {
             // case where server receives a JOIN message
             // format: join,localid
+            System.out.println("Message Received: " + msgTokens[0] + " from " + msgTokens[1]);
             if (msgTokens[0].compareTo("join") == 0) {
                 try {
                     IClientInfo ci;
@@ -71,7 +73,7 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
 
     public void sendJoinedMessage(UUID clientID, boolean success) { // format: join, success or join, failure
         try {
-            String message =    "join" +
+            String message =    "join," +
                                 ((success) ? "success" : "failure");
             sendPacket(message, clientID);
         } catch (IOException e) {
@@ -90,11 +92,27 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
                                 head[0] + "," +
                                 head[1] + "," +
                                 head[2];
+            
             forwardPacketToAll(message, clientID);
         }
         catch (IOException e) { e.printStackTrace(); }
     }
-
+    
+    
+    //Debug
+    @Override
+    protected void forwardPacketToAll(Serializable object, UUID originalClientUID) throws IOException {
+        System.out.println("Forwarding to all: " + object);
+        super.forwardPacketToAll(object, originalClientUID);
+    }
+    
+    /**
+     * Send details for clientID to remoteID
+     * @param clientID
+     * @param remoteId
+     * @param position
+     * @param head
+     */
     public void sendDetailsMessage(UUID clientID, UUID remoteId, String[] position, String[] head) {
         try {
             String message =    "dsfr," +
@@ -102,11 +120,11 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
                                 remoteId.toString() + "," +
                                 position[0] + "," +
                                 position[1] + "," +
-                                position[2] +
+                                position[2] + "," +
                                 head[0] + "," +
                                 head[1] + "," +
                                 head[2];
-            sendPacket(message, clientID);
+            sendPacket(message, remoteId);
         }
         catch (IOException e) { e.printStackTrace(); }
     }
