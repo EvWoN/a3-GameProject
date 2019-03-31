@@ -5,7 +5,6 @@ import ray.networking.client.GameConnectionClient;
 import ray.rml.Vector3;
 import ray.rml.Vector3f;
 
-import javax.vecmath.Vector3d;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.UUID;
@@ -95,6 +94,7 @@ public class ProtocolClient extends GameConnectionClient {
     }
 
     private void createGhostAvatar(UUID ghostID, Vector3 ghostPosition, Vector3 ghostHeading) throws IOException {
+
     }
 
     private void updateGhostAvatar(UUID ghostID, Vector3 ghostPosition, Vector3 ghostHeading) throws IOException {

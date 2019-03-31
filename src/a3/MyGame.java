@@ -718,6 +718,11 @@ public class MyGame extends VariableFrameRateGame {
         return player1.getWorldPosition();
     }
 
+    public Vector3 getPlayerHeading() {
+        SceneNode player1 = sm.getSceneNode("p1DolphinNode");
+        return player1.getWorldForwardAxis();
+    }
+
     public GhostAvatar addGhostAvatar(UUID uuid, Vector3 pos, Vector3 heading) throws IOException {
 //        if (avatar != null) {
 //            Entity ghostE = sm.createEntity("ghost", "whatever.obj");
@@ -732,11 +737,11 @@ public class MyGame extends VariableFrameRateGame {
         return null;
     }
 
-    public GhostAvatar updateGhostAvatar(UUID uuid, Vector3 position, Vector3 heading){
+    public GhostAvatar createGhostAvatar(UUID uuid, Vector3 position, Vector3 heading){
         return null;
     }
 
-    public boolean updateGhostAvatar(GhostAvatar avatar){
+    public boolean updateGhostAvatar(GhostAvatar avatar, Vector3 position, Vector3 heading){
         return true;
     }
 
