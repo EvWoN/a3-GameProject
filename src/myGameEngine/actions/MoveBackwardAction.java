@@ -1,13 +1,16 @@
 package myGameEngine.actions;
 
+import myGameEngine.Networking.ProtocolClient;
 import net.java.games.input.Event;
 import ray.rage.scene.Node;
 
 public class MoveBackwardAction extends AbstractConstraintMoveAction {
     private Node nodeToMove;
+    private ProtocolClient protoClient;
 
-    public MoveBackwardAction(Node c) {
+    public MoveBackwardAction(Node c, ProtocolClient protocolClient) {
         nodeToMove = c;
+        protoClient = protocolClient;
     }
 
     @Override
@@ -20,6 +23,7 @@ public class MoveBackwardAction extends AbstractConstraintMoveAction {
             if(!isLegal(nodeToMove)){
                 nodeToMove.moveForward(value);
             }
+            protoClient.sendMoveMessage(nodeToMove.getWorldPosition(),nodeToMove.getWorldForwardAxis());
         }
     }
 }

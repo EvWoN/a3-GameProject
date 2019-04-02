@@ -23,7 +23,7 @@ public class MoveForwardAction extends AbstractConstraintMoveAction {
             if(!isLegal(nodeToMove)){
                 nodeToMove.moveBackward(value);
             }
+            protoClient.sendMoveMessage(nodeToMove.getWorldPosition(),nodeToMove.getWorldForwardAxis());
         }
-        protoClient.sendMoveMessage(nodeToMove.getWorldPosition(),nodeToMove.getWorldForwardAxis());
     }
 }

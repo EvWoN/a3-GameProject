@@ -13,7 +13,6 @@ public class NetworkingServer {
                 System.err.println("TCP Protocol not supported");
             } else {
                 thisUDPServer = new GameServerUDP(serverPort);
-                System.out.println(serverPort);
             }
         } catch (IOException e) {
             e.printStackTrace();

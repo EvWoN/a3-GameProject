@@ -198,13 +198,13 @@ public class MyGame extends VariableFrameRateGame {
 
         //Actions
         MoveForwardAction moveForwardAction = new MoveForwardAction(p1DolphinNode,protClient);
-        MoveBackwardAction moveBackwardAction = new MoveBackwardAction(p1DolphinNode);
-        MoveRightAction moveRightAction = new MoveRightAction(p1DolphinNode);
-        MoveLeftAction moveLeftAction = new MoveLeftAction(p1DolphinNode);
+        MoveBackwardAction moveBackwardAction = new MoveBackwardAction(p1DolphinNode, protClient);
+        MoveRightAction moveRightAction = new MoveRightAction(p1DolphinNode,protClient);
+        MoveLeftAction moveLeftAction = new MoveLeftAction(p1DolphinNode,protClient);
         RotateDownAction rotateDownAction = new RotateDownAction(p1DolphinNode);
         RotateUpAction rotateUpAction = new RotateUpAction(p1DolphinNode);
-        RotateLeftAction rotateLeftAction = new RotateLeftAction(p1DolphinNode);
-        RotateRightAction rotateRightAction = new RotateRightAction(p1DolphinNode);
+        RotateLeftAction rotateLeftAction = new RotateLeftAction(p1DolphinNode,protClient);
+        RotateRightAction rotateRightAction = new RotateRightAction(p1DolphinNode,protClient);
 
         for (Controller c : controllers) {
             if (c.getType() == Controller.Type.KEYBOARD) {
@@ -261,47 +261,47 @@ public class MyGame extends VariableFrameRateGame {
             }
         }
 
-        moveBackwardAction = new MoveBackwardAction(p2DolphinNode);
-        moveRightAction = new MoveRightAction(p2DolphinNode);
-        rotateUpAction = new RotateUpAction(p2DolphinNode);
-        rotateLeftAction = new RotateLeftAction(p2DolphinNode);
-        rotateRightAction = new RotateRightAction(p2DolphinNode);
-
-        for (Controller c : controllers) {
-            if (c.getType() == Controller.Type.GAMEPAD || c.getType() == Controller.Type.STICK) {
-                im.associateAction(
-                        c,
-                        Component.Identifier.Axis.Y,
-                        moveBackwardAction,
-                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
-                );
-                im.associateAction(
-                        c,
-                        Component.Identifier.Axis.X,
-                        moveRightAction,
-                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
-                );
-                im.associateAction(
-                        c,
-                        Component.Identifier.Axis.Z,
-                        rotateUpAction,
-                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
-                );
-                im.associateAction(
-                        c,
-                        Component.Identifier.Button._4,
-                        rotateLeftAction,
-                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
-                );
-                im.associateAction(
-                        c,
-                        Component.Identifier.Button._5,
-                        rotateRightAction,
-                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
-                );
-                p2CameraController.setupInput(im, c);
-            }
-        }
+//        moveBackwardAction = new MoveBackwardAction(p2DolphinNode);
+//        moveRightAction = new MoveRightAction(p2DolphinNode);
+//        rotateUpAction = new RotateUpAction(p2DolphinNode);
+//        rotateLeftAction = new RotateLeftAction(p2DolphinNode);
+//        rotateRightAction = new RotateRightAction(p2DolphinNode);
+//
+//        for (Controller c : controllers) {
+//            if (c.getType() == Controller.Type.GAMEPAD || c.getType() == Controller.Type.STICK) {
+//                im.associateAction(
+//                        c,
+//                        Component.Identifier.Axis.Y,
+//                        moveBackwardAction,
+//                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
+//                );
+//                im.associateAction(
+//                        c,
+//                        Component.Identifier.Axis.X,
+//                        moveRightAction,
+//                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
+//                );
+//                im.associateAction(
+//                        c,
+//                        Component.Identifier.Axis.Z,
+//                        rotateUpAction,
+//                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
+//                );
+//                im.associateAction(
+//                        c,
+//                        Component.Identifier.Button._4,
+//                        rotateLeftAction,
+//                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
+//                );
+//                im.associateAction(
+//                        c,
+//                        Component.Identifier.Button._5,
+//                        rotateRightAction,
+//                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
+//                );
+//                p2CameraController.setupInput(im, c);
+//            }
+//        }
     }
 
     @Override
@@ -346,7 +346,6 @@ public class MyGame extends VariableFrameRateGame {
         this.sm = sm;
         this.eng = eng;
 
-        setupNetworking();
 
         ScriptEngineManager scriptManager = new ScriptEngineManager();
         String scriptName = "PlanetGen.js";
@@ -377,6 +376,8 @@ public class MyGame extends VariableFrameRateGame {
 
         //set up Setup Point system
         ps = new PointSystem(dolphinN_1, rc, dolphinN_2, sc);
+
+        System.out.println(dolphinN_1.getWorldRotation());
 
         //Scene axis
         showAxis(eng, sm);
@@ -412,6 +413,7 @@ public class MyGame extends VariableFrameRateGame {
 
         sm.setActiveSkyBox(startBox);
 
+        setupNetworking();
         setupControls(sm);
     }
 
@@ -731,12 +733,13 @@ public class MyGame extends VariableFrameRateGame {
 
     public Vector3 getPlayerHeading() {
         SceneNode player1 = sm.getSceneNode("p1DolphinNode");
+        System.out.println("Get Heading: " + player1.getWorldRotation());
+        System.out.println(player1.getWorldForwardAxis());
         return player1.getWorldForwardAxis();
     }
 
     public GhostAvatar createGhostAvatar(UUID uuid, Vector3 position, Vector3 heading) throws IOException {
         //Player
-
         Entity dolphinE_2 = sm.createEntity("p2Dolphin" + uuid.toString(), "dolphinHighPoly.obj");
         SceneNode dolphinN_2 = sm.getRootSceneNode().createChildSceneNode(dolphinE_2.getName() + "Node");
 
@@ -749,6 +752,7 @@ public class MyGame extends VariableFrameRateGame {
         dolphinE_2.setRenderState(texState);
 
         GhostAvatar ghostAvatar = new GhostAvatar(uuid, dolphinN_2, dolphinE_2);
+        System.out.println("Position:: " + position + "Heading:: " + heading);
         ghostAvatar.setPosition(position);
         ghostAvatar.setHeading(heading);
     
@@ -758,7 +762,7 @@ public class MyGame extends VariableFrameRateGame {
 
     public boolean updateGhostAvatar(GhostAvatar avatar, Vector3 position, Vector3 heading){
         System.out.println("\\u003B[31mAVATAR:\\u003B[0m" + avatar + " POSI:" + position + " HEADING:" + heading);
-        System.out.println("Avatar is in scene? " + avatar.getNode().isInSceneGraph());
+        System.out.println("Avatar is in scene? " + avatar.getNode());
         avatar.setPosition(position);
         avatar.setHeading(heading);
         return avatar.getNode().isInSceneGraph();

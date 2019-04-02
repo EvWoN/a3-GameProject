@@ -11,6 +11,7 @@ import java.util.UUID;
 public class GameServerUDP extends GameConnectionServer<UUID> {
     public GameServerUDP(int localPort) throws IOException {
         super(localPort, ProtocolType.UDP);
+        System.out.println("Local IP: " + InetAddress.getLocalHost() + " Port: " +localPort);
     }
 
     @Override

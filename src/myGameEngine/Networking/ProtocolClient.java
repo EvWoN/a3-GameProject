@@ -6,6 +6,7 @@ import ray.rml.Vector3;
 import ray.rml.Vector3f;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.UUID;
@@ -152,7 +153,7 @@ public class ProtocolClient extends GameConnectionClient {
                                 pos.z() + "," +
                                 head.x() + "," +
                                 head.y() + "," +
-                                head.z();
+                                head.z() + ",";
             sendPacket(message);
         }
         catch (IOException e) { e.printStackTrace(); }
@@ -179,7 +180,7 @@ public class ProtocolClient extends GameConnectionClient {
                                 pos.z() + "," +
                                 head.x() + "," +
                                 head.y() + "," +
-                                head.z();
+                                head.z() + ",";
             sendPacket(message);
         }
         catch (IOException e) { e.printStackTrace(); }
@@ -194,9 +195,15 @@ public class ProtocolClient extends GameConnectionClient {
                                 pos.z() + "," +
                                 head.x() + "," +
                                 head.y() + "," +
-                                head.z();
+                                head.z() + ",";
             sendPacket(message);
         }
         catch (IOException e) { e.printStackTrace(); }
+    }
+
+    @Override
+    public void sendPacket(Serializable object) throws IOException {
+        System.out.println("SendingPackage: " + object);
+        super.sendPacket(object);
     }
 }

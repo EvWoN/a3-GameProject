@@ -43,14 +43,24 @@ public class GhostAvatar {
 
     public void setHeading(Vector3 heading) {
         Vector3 sub = node.getLocalForwardAxis().sub(heading);
-        float z = sub.z();
-        float x = sub.x();
 
-        double atan = Math.atan(x / z);
+        if(!(heading.x() == 0 && heading.y() == 0 && heading.z() == 0)) {
 
-        Matrix4 rotationFrom = Matrix4f.createRotationFrom(Degreef.createFrom((float) atan), Vector3f.createFrom(0, 1, 0));
-        Matrix3 mult = rotationFrom.toMatrix3().mult(node.getLocalRotation());
-        node.setLocalRotation(mult);
+            Vector3 rightVector = heading.rotate(Degreef.createFrom(90f), Vector3f.createFrom(0, 1, 0));
+            Vector3 topVector = Vector3f.createFrom(0, 1, 0);
+
+            System.out.println("Heading: " + heading + "\nRightVector: " + rightVector + "\nTopVector: " + topVector);
+
+            node.setLocalRotation(Matrix3f.createFrom(rightVector, topVector, heading));
+        }
+//        node.setLocalRotation(Matrix3f.createFrom());
+//        double atan = Math.atan(x / z);
+//        if(!Double.isNaN(atan)) {
+//            Matrix4 rotationFrom = Matrix4f.createRotationFrom(Degreef.createFrom((float) atan), Vector3f.createFrom(0, 1, 0));
+//            Matrix3 mult = rotationFrom.toMatrix3().mult(node.getLocalRotation());
+//            System.out.println(mult);
+//            node.setLocalRotation(mult);
+//        }
     }
     
     @Override
