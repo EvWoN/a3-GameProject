@@ -1,14 +1,19 @@
 package myGameEngine.actions;
 
+import a3.MyGame;
 import myGameEngine.Networking.ProtocolClient;
 import net.java.games.input.Event;
 import ray.rage.scene.Node;
+import ray.rage.scene.SceneNode;
 
 public class MoveLeftAction extends AbstractConstraintMoveAction {
+
+    private MyGame myGame;
     private Node nodeToMove;
     ProtocolClient protoClient;
 
-    public MoveLeftAction(Node c, ProtocolClient protocolClient) {
+    public MoveLeftAction(MyGame game, Node c, ProtocolClient protocolClient) {
+        myGame = game;
         nodeToMove = c;
         protoClient = protocolClient;
     }
@@ -25,6 +30,7 @@ public class MoveLeftAction extends AbstractConstraintMoveAction {
                 nodeToMove.moveRight(-value);
             }
             protoClient.sendMoveMessage(nodeToMove.getWorldPosition(),nodeToMove.getWorldForwardAxis());
+            myGame.updateVerticalPosition((SceneNode) nodeToMove);
         }
     }
 }

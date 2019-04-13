@@ -197,10 +197,10 @@ public class MyGame extends VariableFrameRateGame {
 
 
         //Actions
-        MoveForwardAction moveForwardAction = new MoveForwardAction(p1DolphinNode,protClient);
-        MoveBackwardAction moveBackwardAction = new MoveBackwardAction(p1DolphinNode, protClient);
-        MoveRightAction moveRightAction = new MoveRightAction(p1DolphinNode,protClient);
-        MoveLeftAction moveLeftAction = new MoveLeftAction(p1DolphinNode,protClient);
+        MoveForwardAction moveForwardAction = new MoveForwardAction(this, p1DolphinNode,protClient);
+        MoveBackwardAction moveBackwardAction = new MoveBackwardAction(this, p1DolphinNode, protClient);
+        MoveRightAction moveRightAction = new MoveRightAction(this, p1DolphinNode,protClient);
+        MoveLeftAction moveLeftAction = new MoveLeftAction(this, p1DolphinNode,protClient);
         RotateDownAction rotateDownAction = new RotateDownAction(p1DolphinNode);
         RotateUpAction rotateUpAction = new RotateUpAction(p1DolphinNode);
         RotateLeftAction rotateLeftAction = new RotateLeftAction(p1DolphinNode,protClient);
@@ -346,7 +346,6 @@ public class MyGame extends VariableFrameRateGame {
         this.sm = sm;
         this.eng = eng;
 
-
         ScriptEngineManager scriptManager = new ScriptEngineManager();
         String scriptName = "PlanetGen.js";
         List<ScriptEngineFactory> scriptList = scriptManager.getEngineFactories();
@@ -382,10 +381,19 @@ public class MyGame extends VariableFrameRateGame {
         //Scene axis
         showAxis(eng, sm);
 
+        /*
         //Ground floor
         SceneNode groundFloor = makeGroundFloor(eng, sm);
         groundFloor.moveDown(.5f);
         groundFloor.scale(10f, 10f, 10f);
+        */
+        Tessellation tessE = sm.createTessellation("TessE", 6);
+        tessE.setSubdivisions(8f);
+        SceneNode tessN = sm.getRootSceneNode().createChildSceneNode("TessN");
+        tessN.attachObject(tessE);
+        tessN.scale(10, 50, 10);
+        tessE.setHeightMap(this.getEngine(), "AnotherHeightMap.jpg");
+        tessE.setTexture(this.getEngine(), "moon.jpeg");
 
 
         //Make planets
@@ -772,4 +780,20 @@ public class MyGame extends VariableFrameRateGame {
         sm.destroySceneNode(avatar.getNode());
     }
 
+    public void updateVerticalPosition(SceneNode obj){
+        SceneNode tessN = this.getEngine().getSceneManager().getSceneNode("TessN");
+        Tessellation tessE = ((Tessellation) tessN.getAttachedObject("TessE"));
+        Vector3 worldObjectPosition = obj.getWorldPosition();
+        Vector3 localObjectPoistion = obj.getLocalPosition();
+
+        Vector3 newObjectPosition  = Vector3f.createFrom(
+                localObjectPoistion.x(),
+                tessE.getWorldHeight(
+                        worldObjectPosition.x(),
+                        worldObjectPosition.z()),
+                localObjectPoistion.z()
+        );
+
+        obj.setLocalPosition(newObjectPosition);
+    }
 }
