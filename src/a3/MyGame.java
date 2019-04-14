@@ -340,7 +340,7 @@ public class MyGame extends VariableFrameRateGame {
         SceneNode dolphinN_1 = sm.getRootSceneNode().createChildSceneNode(dolphinE_1.getName() + "Node");
         dolphinN_1.moveRight(.5f);
         dolphinN_1.attachObject(dolphinE_1);
-        dolphinE_1.setMaterial(sm.getMaterialManager().getAsset(Paths.get("astronaut.mtl")));
+        //dolphinE_1.setMaterial(sm.getMaterialManager().getAsset(Paths.get("astronaut.mtl")));
 
         System.out.println(dolphinN_1.getWorldRotation());
 
@@ -714,16 +714,11 @@ public class MyGame extends VariableFrameRateGame {
 
     public GhostAvatar createGhostAvatar(UUID uuid, Vector3 position, Vector3 heading) throws IOException {
         //Player
-        Entity dolphinE_2 = sm.createEntity("p2Dolphin" + uuid.toString(), "dolphinHighPoly.obj");
+        Entity dolphinE_2 = sm.createEntity("p2Dolphin" + uuid.toString(), "assembeled_ship.obj");
         SceneNode dolphinN_2 = sm.getRootSceneNode().createChildSceneNode(dolphinE_2.getName() + "Node");
 
         dolphinE_2.setPrimitive(Primitive.TRIANGLES);
         dolphinN_2.attachObject(dolphinE_2);
-
-        Texture tex = eng.getTextureManager().getAssetByPath("DolphinPink_HighPolyUV.png");
-        TextureState texState = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
-        texState.setTexture(tex);
-        dolphinE_2.setRenderState(texState);
 
         GhostAvatar ghostAvatar = new GhostAvatar(uuid, dolphinN_2, dolphinE_2);
         System.out.println("Position:: " + position + "Heading:: " + heading);
