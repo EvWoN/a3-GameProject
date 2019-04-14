@@ -2,7 +2,6 @@ package a3;
 
 import myGameEngine.Networking.GhostAvatar;
 import myGameEngine.Networking.ProtocolClient;
-import myGameEngine.PointSystem;
 import myGameEngine.actions.*;
 import myGameEngine.controller.OrbitCameraController;
 import myGameEngine.controller.SquishyBounceController;
@@ -47,6 +46,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.List;
 
@@ -67,8 +67,6 @@ public class MyGame extends VariableFrameRateGame {
     //Controllers
     private RotationController rc;
     private SquishyBounceController sc;
-
-    private PointSystem ps;
 
     private OrbitCameraController p1CameraController;
     private OrbitCameraController p2CameraController;
@@ -131,16 +129,16 @@ public class MyGame extends VariableFrameRateGame {
         rs = (GL4RenderSystem) engine.getRenderSystem();
         int height = rs.getCanvas().getHeight();
 
-        ps.updateScores();
-        String dispStr1 = "Score = " + ps.getP1Score();
-        String dispStr2 = "Score = " + ps.getP2Score();
+//        ps.updateScores();
+//        String dispStr1 = "Score = " + ps.getP1Score();
+//        String dispStr2 = "Score = " + ps.getP2Score();
 
-        rs.setHUD(dispStr1, 20, height / 2 + 20);
-        rs.setHUD2(dispStr2, 20, 20);
+//        rs.setHUD(dispStr1, 20, height / 2 + 20);
+//        rs.setHUD2(dispStr2, 20, 20);
         float elapsedTimeMillis = engine.getElapsedTimeMillis();
         im.update(elapsedTimeMillis);
         p1CameraController.updateCameraPosition();
-        p2CameraController.updateCameraPosition();
+//        p2CameraController.updateCameraPosition();
 
 
         //Networking, process packets
@@ -163,11 +161,9 @@ public class MyGame extends VariableFrameRateGame {
         System.out.println("SetupWindowViewports");
         rw.addKeyListener(this);
         Viewport topViewport = rw.getViewport(0);
-        topViewport.setDimensions(.51f, .01f, .99f, .49f);
+//        topViewport.setDimensions(.51f, .01f, .99f, .49f);
         topViewport.setClearColor(new Color(.1f, .1f, .1f));
 
-        Viewport bottomViewport = rw.createViewport(.01f, .01f, .99f, .49f);
-        bottomViewport.setClearColor(new Color(.1f, .1f, .1f));
     }
 
     @Override
@@ -189,11 +185,6 @@ public class MyGame extends VariableFrameRateGame {
         Camera player1Camera = sm.getCamera("Player1Camera");
         SceneNode p1DolphinNode = sm.getSceneNode("p1DolphinNode");
         p1CameraController = new OrbitCameraController(player1Camera, player1Camera.getParentNode(), p1DolphinNode);
-
-        //Player 2: Link and setup controls
-        Camera player2Camera = sm.getCamera("Player2Camera");
-        SceneNode p2DolphinNode = sm.getSceneNode("p2DolphinNode");
-        p2CameraController = new OrbitCameraController(player2Camera, player2Camera.getParentNode(), p2DolphinNode);
 
 
         //Actions
@@ -320,16 +311,6 @@ public class MyGame extends VariableFrameRateGame {
         p1Camera.setFd((Vector3f) Vector3f.createFrom(0.0f, 0.0f, -1.0f));
         p1Camera.setPo((Vector3f) Vector3f.createFrom(0f, 0f, 0f));
 
-        //Player 2 Camera
-        Camera p2Camera = sm.createCamera("Player2Camera", Projection.PERSPECTIVE);
-        rw.getViewport(1).setCamera(p2Camera);
-        SceneNode p2CameraNode = rootNode.createChildSceneNode(p2Camera.getName() + "Node");
-        p2CameraNode.attachObject(p2Camera);
-        p2Camera.setMode('n');
-        p2Camera.setRt((Vector3f) Vector3f.createFrom(1.0f, 0.0f, 0.0f));
-        p2Camera.setUp((Vector3f) Vector3f.createFrom(0.0f, 1.0f, 0.0f));
-        p2Camera.setFd((Vector3f) Vector3f.createFrom(0.0f, 0.0f, -1.0f));
-        p2Camera.setPo((Vector3f) Vector3f.createFrom(0f, 0f, 0f));
     }
 
     protected void initControllers(SceneManager sm) {
@@ -354,27 +335,12 @@ public class MyGame extends VariableFrameRateGame {
         initControllers(sm);
 
         //p1Dolphin
-        Entity dolphinE_1 = sm.createEntity("p1Dolphin", "dolphinHighPoly.obj");
+        Entity dolphinE_1 = sm.createEntity("p1Dolphin", "astronaut.obj");
         dolphinE_1.setPrimitive(Primitive.TRIANGLES);
         SceneNode dolphinN_1 = sm.getRootSceneNode().createChildSceneNode(dolphinE_1.getName() + "Node");
         dolphinN_1.moveRight(.5f);
         dolphinN_1.attachObject(dolphinE_1);
-
-        //p2Dolphin
-        Entity dolphinE_2 = sm.createEntity("p2Dolphin", "dolphinHighPoly.obj");
-        dolphinE_2.setPrimitive(Primitive.TRIANGLES);
-        SceneNode dolphinN_2 = sm.getRootSceneNode().createChildSceneNode(dolphinE_2.getName() + "Node");
-        dolphinN_2.moveLeft(.5f);
-        dolphinN_2.attachObject(dolphinE_2);
-
-        //New texture for player two
-        Texture tex = eng.getTextureManager().getAssetByPath("DolphinPink_HighPolyUV.png");
-        TextureState texState = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
-        texState.setTexture(tex);
-        dolphinE_2.setRenderState(texState);
-
-        //set up Setup Point system
-        ps = new PointSystem(dolphinN_1, rc, dolphinN_2, sc);
+        dolphinE_1.setMaterial(sm.getMaterialManager().getAsset(Paths.get("astronaut.mtl")));
 
         System.out.println(dolphinN_1.getWorldRotation());
 
@@ -403,7 +369,7 @@ public class MyGame extends VariableFrameRateGame {
         int numOfPlanets = (int) scriptEngine.get("numPlanets");
         for (int i = 0; i < numOfPlanets; i++) {
             SceneNode randPlanet = generateRandPlanet(eng, sm, planetsParentNode);
-            ps.addPointNode(randPlanet);
+//            ps.addPointNode(randPlanet);
         }
 
         //Lighting
