@@ -2,21 +2,12 @@
 # Material Count: 1
 
 newmtl AstroMainMat
-# shininess
-Ns 75
-# ambient
+Ns 100.000000
 Ka 1.000000 1.000000 1.000000
-# diffuse
-Kd 1.00000 1.00000 1.00000
-# specular
-Ks 1.000000 1.000000 1.000000
-# emissive
-Ke 0.000000 0.000000 0.000000
-# refraction
-Ni 1.000000
-# fully opaque
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.0 0.0 0.0
+Ni 1.450000
 d 1.000000
-# illumination model
 illum 2
-# texture
 map_Kd AstronautDiffuse-01.png
