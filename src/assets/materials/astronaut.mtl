@@ -13,7 +13,7 @@ illum 2
 map_Kd AstronautDiffuse-01.png
 
 newmtl Helmet
-Ns 2.000000
+Ns 120.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.000000 0.000000 0.000000
 Ks 1.000000 1.000000 1.000000
