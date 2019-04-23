@@ -72,6 +72,8 @@ public class MyGame extends VariableFrameRateGame {
 
     private float elapsTime = 0.0f;
 
+    private boolean alone = true;
+
     public MyGame(String serverAddr, int sPort, String protocol) {
         super();
         System.out.println("WIN by touching the most planets the fastest. Best of 15 planets.");
@@ -102,8 +104,8 @@ public class MyGame extends VariableFrameRateGame {
         isClientConnected = false;
         try {
             System.out.println("Networking is being set up");
-            this.protClient = new ProtocolClient(InetAddress.
-                    getByName(serverAddress), serverPort, serverProtocol, this);
+            this.protClient = new ProtocolClient(InetAddress
+                    .getByName(serverAddress), serverPort, serverProtocol, this);
             System.out.println(protClient);
 
         } catch (UnknownHostException e) {
@@ -147,7 +149,7 @@ public class MyGame extends VariableFrameRateGame {
     protected void processNetworking(float elapsTime) { // Process packets received by the client from the server
         if (protClient != null)
             protClient.processPackets();
-            // remove ghost avatars for players who have left the game
+        // remove ghost avatars for players who have left the game
         Iterator<UUID> it = gameObjectsToRemove.iterator();
         while (it.hasNext()) {
             sm.destroySceneNode(it.next().toString());
@@ -323,6 +325,9 @@ public class MyGame extends VariableFrameRateGame {
     protected void setupScene(Engine eng, SceneManager sm) throws IOException {
         System.out.println("SetupScene");
 
+        setupNetworking();
+        processNetworking(eng.getElapsedTimeMillis());
+
         this.sm = sm;
         this.eng = eng;
 
@@ -335,6 +340,9 @@ public class MyGame extends VariableFrameRateGame {
 
         //p1Dolphin
         Entity dolphinE_1 = sm.createEntity("p1Dolphin", "astronaut.obj");
+
+        setAstronautTexture(dolphinE_1);
+
         dolphinE_1.setPrimitive(Primitive.TRIANGLES);
         SceneNode dolphinN_1 = sm.getRootSceneNode().createChildSceneNode(dolphinE_1.getName() + "Node");
         dolphinN_1.moveRight(.5f);
@@ -386,7 +394,6 @@ public class MyGame extends VariableFrameRateGame {
 
         sm.setActiveSkyBox(startBox);
 
-        setupNetworking();
         setupControls(sm);
     }
 
@@ -713,7 +720,12 @@ public class MyGame extends VariableFrameRateGame {
 
     public GhostAvatar createGhostAvatar(UUID uuid, Vector3 position, Vector3 heading) throws IOException {
         //Player
-        Entity dolphinE_2 = sm.createEntity("p2Dolphin" + uuid.toString(), "assembeled_ship.obj");
+        alone = false;
+
+        Entity dolphinE_2 = sm.createEntity("p2Dolphin" + uuid.toString(), "astronaut.obj");
+
+        setAstronautTexture(dolphinE_2);
+
         SceneNode dolphinN_2 = sm.getRootSceneNode().createChildSceneNode(dolphinE_2.getName() + "Node");
 
         dolphinE_2.setPrimitive(Primitive.TRIANGLES);
@@ -723,8 +735,9 @@ public class MyGame extends VariableFrameRateGame {
         System.out.println("Position:: " + position + "Heading:: " + heading);
         ghostAvatar.setPosition(position);
         ghostAvatar.setHeading(heading);
-    
+
         System.out.println("Ghost is being created: " + ghostAvatar + " Node:" + dolphinN_2.toString());
+
         return ghostAvatar;
     }
 
@@ -755,5 +768,16 @@ public class MyGame extends VariableFrameRateGame {
         );
 
         obj.setLocalPosition(newObjectPosition);
+    }
+
+    private void setAstronautTexture(Entity astronaut) {
+        String fileName = (alone) ? "AstronautDiffuse-01.png" : "AstronautDiffuse-02.png";
+        try {
+            Texture tex = eng.getTextureManager().getAssetByPath(fileName);
+            TextureState texState = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
+            texState.setTexture(tex);
+            astronaut.setRenderState(texState);
+        }
+        catch(IOException e) { System.out.println(fileName + " not found."); }
     }
 }
