@@ -29,7 +29,7 @@ public class MoveRightAction extends AbstractConstraintMoveAction {
                 nodeToMove.moveLeft(-value);
             }
             protoClient.sendMoveMessage(nodeToMove.getWorldPosition(),nodeToMove.getWorldForwardAxis());
-            myGame.updateVerticalPosition((SceneNode) nodeToMove);
+            //myGame.updateVerticalPosition((SceneNode) nodeToMove);
         }
     }
 }

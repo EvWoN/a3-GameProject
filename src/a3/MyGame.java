@@ -10,6 +10,9 @@ import net.java.games.input.Controller;
 import ray.input.GenericInputManager;
 import ray.input.InputManager;
 import ray.networking.IGameConnection;
+import ray.physics.PhysicsEngine;
+import ray.physics.PhysicsEngineFactory;
+import ray.physics.PhysicsObject;
 import ray.rage.Engine;
 import ray.rage.asset.texture.Texture;
 import ray.rage.asset.texture.TextureManager;
@@ -30,6 +33,8 @@ import ray.rage.scene.Camera.Frustum.Projection;
 import ray.rage.scene.controllers.RotationController;
 import ray.rage.util.BufferUtil;
 import ray.rage.util.Configuration;
+import ray.rml.Matrix4;
+import ray.rml.Matrix4f;
 import ray.rml.Vector3;
 import ray.rml.Vector3f;
 
@@ -63,6 +68,24 @@ public class MyGame extends VariableFrameRateGame {
     public boolean isClientConnected;
     private List<UUID> gameObjectsToRemove;
 
+    private PhysicsEngine physicsEng;
+
+    private Entity groundEntity;
+    private SceneNode groundNode;
+    private PhysicsObject groundPhysObj;
+
+    private Entity dolphinE_1;
+    private SceneNode dolphinN_1;
+    private PhysicsObject dolphinPO_1;
+    /*
+    private Tessellation tessE;
+    private SceneNode tessN;
+    private PhysicsObject tessO;
+    */
+
+    private SceneNode ballNode;
+    private PhysicsObject ballObject;
+
     //Controllers
     private RotationController rc;
     private SquishyBounceController sc;
@@ -73,6 +96,8 @@ public class MyGame extends VariableFrameRateGame {
     private float elapsTime = 0.0f;
 
     private boolean alone = true;
+
+    private String velocityVector;
 
     public MyGame(String serverAddr, int sPort, String protocol) {
         super();
@@ -137,8 +162,23 @@ public class MyGame extends VariableFrameRateGame {
 //        rs.setHUD(dispStr1, 20, height / 2 + 20);
 //        rs.setHUD2(dispStr2, 20, 20);
         float elapsedTimeMillis = engine.getElapsedTimeMillis();
+        velocityVector = (
+                        "(" +
+                        dolphinN_1.getPhysicsObject().getLinearVelocity()[0] + "," +
+                        dolphinN_1.getPhysicsObject().getLinearVelocity()[1] + "," +
+                        dolphinN_1.getPhysicsObject().getLinearVelocity()[2] + ") " +
+                        dolphinN_1.getPhysicsObject().isDynamic());
+        rs.setHUD(velocityVector);
         im.update(elapsedTimeMillis);
         p1CameraController.updateCameraPosition();
+        Matrix4 mat;
+        physicsEng.update(elapsedTimeMillis);
+        for(SceneNode s : engine.getSceneManager().getSceneNodes()){
+            if(s.getPhysicsObject() != null){
+                mat = Matrix4f.createFrom(toFloatArray(s.getPhysicsObject().getTransform()));
+                s.setLocalPosition(mat.value(0,3), mat.value(1, 3), mat.value(2, 3));
+            }
+        }
 //        p2CameraController.updateCameraPosition();
 
 
@@ -197,6 +237,7 @@ public class MyGame extends VariableFrameRateGame {
         RotateUpAction rotateUpAction = new RotateUpAction(p1DolphinNode);
         RotateLeftAction rotateLeftAction = new RotateLeftAction(p1DolphinNode,protClient);
         RotateRightAction rotateRightAction = new RotateRightAction(p1DolphinNode,protClient);
+        JumpAction jumpAction = new JumpAction(dolphinN_1);
 
         for (Controller c : controllers) {
             if (c.getType() == Controller.Type.KEYBOARD) {
@@ -247,6 +288,12 @@ public class MyGame extends VariableFrameRateGame {
                         Component.Identifier.Key.D,
                         rotateRightAction,
                         InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
+                );
+                im.associateAction(
+                        c,
+                        Component.Identifier.Key.SPACE,
+                        jumpAction,
+                        InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY
                 );
 
                 p1CameraController.setupInput(im, c);
@@ -339,12 +386,12 @@ public class MyGame extends VariableFrameRateGame {
         initControllers(sm);
 
         //p1Dolphin
-        Entity dolphinE_1 = sm.createEntity("p1Dolphin", "astronaut.obj");
+        dolphinE_1 = sm.createEntity("p1Dolphin", "Ufo.obj");
 
         setAstronautTexture(dolphinE_1);
 
         dolphinE_1.setPrimitive(Primitive.TRIANGLES);
-        SceneNode dolphinN_1 = sm.getRootSceneNode().createChildSceneNode(dolphinE_1.getName() + "Node");
+        dolphinN_1 = sm.getRootSceneNode().createChildSceneNode(dolphinE_1.getName() + "Node");
         dolphinN_1.moveRight(.5f);
         dolphinN_1.attachObject(dolphinE_1);
         //dolphinE_1.setMaterial(sm.getMaterialManager().getAsset(Paths.get("astronaut.mtl")));
@@ -354,20 +401,26 @@ public class MyGame extends VariableFrameRateGame {
         //Scene axis
         showAxis(eng, sm);
 
-        /*
         //Ground floor
-        SceneNode groundFloor = makeGroundFloor(eng, sm);
-        groundFloor.moveDown(.5f);
-        groundFloor.scale(10f, 10f, 10f);
-        */
-        Tessellation tessE = sm.createTessellation("TessE", 6);
+        groundEntity = sm.createEntity("GroundEntity", "platform1.obj");
+        groundNode = sm.getRootSceneNode().createChildSceneNode("GroundNode");
+        groundNode.attachObject(groundEntity);
+        groundNode.setLocalPosition(0, -3, 0);
+
+        /*
+        tessE = sm.createTessellation("TessE", 6);
         tessE.setSubdivisions(8f);
-        SceneNode tessN = sm.getRootSceneNode().createChildSceneNode("TessN");
+        tessN = sm.getRootSceneNode().createChildSceneNode("TessN");
         tessN.attachObject(tessE);
         tessN.scale(10, 50, 10);
         tessE.setHeightMap(this.getEngine(), "AnotherHeightMap.jpg");
         tessE.setTexture(this.getEngine(), "moon.jpeg");
+        */
 
+        /*Entity ballEntity = sm.createEntity("BallEntity", "earth.obj");
+        ballNode = sm.getRootSceneNode().createChildSceneNode("BallNode");
+        ballNode.attachObject(ballEntity);
+        ballNode.setLocalPosition(0, 40, 0);*/
 
         //Make planets
         SceneNode planetsParentNode = sm.getRootSceneNode().createChildSceneNode("planetsCenterNode");
@@ -393,6 +446,9 @@ public class MyGame extends VariableFrameRateGame {
         SkyBox startBox = makeSkyBox("red");
 
         sm.setActiveSkyBox(startBox);
+
+        initPhysicsSystem();
+        createRagePhysicsWorld();
 
         setupControls(sm);
     }
@@ -771,7 +827,7 @@ public class MyGame extends VariableFrameRateGame {
     }
 
     private void setAstronautTexture(Entity astronaut) {
-        String fileName = (alone) ? "AstronautDiffuse-01.png" : "AstronautDiffuse-02.png";
+        String fileName = (alone) ? "UfoTex.png" : "AstronautDiffuse-02.png";
         try {
             Texture tex = eng.getTextureManager().getAssetByPath(fileName);
             TextureState texState = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
@@ -779,5 +835,60 @@ public class MyGame extends VariableFrameRateGame {
             astronaut.setRenderState(texState);
         }
         catch(IOException e) { System.out.println(fileName + " not found."); }
+    }
+
+    private void initPhysicsSystem(){
+        String engine = "ray.physics.JBullet.JBulletPhysicsEngine";
+        float[] gravity = {0, -3f, 0};
+
+        physicsEng = PhysicsEngineFactory.createPhysicsEngine(engine);
+        physicsEng.initSystem();
+        physicsEng.setGravity(gravity);
+    }
+
+    private void createRagePhysicsWorld() {
+        float mass = 1.0f;
+        float[] up = {0, 1, 0};
+        double[] temptf;
+        Matrix4 tempm;
+
+        /*temptf = toDoubleArray(ballNode.getLocalTransform().toFloatArray());
+        ballObject = physicsEng.addSphereObject(physicsEng.nextUID(), mass, temptf, 2.0f);
+        ballObject.setBounciness(1.0f);
+        ballNode.setPhysicsObject(ballObject);*/
+
+        /*temptf = toDoubleArray(tessN.getLocalTransform().toFloatArray());
+        tessO = physicsEng.addStaticPlaneObject(physicsEng.nextUID(), temptf, up, 0.0f);
+        tessO.setBounciness(1.0f);
+        tessN.setPhysicsObject(tessO);*/
+        temptf = toDoubleArray(groundNode.getLocalTransform().toFloatArray());
+        groundPhysObj = physicsEng.addStaticPlaneObject(physicsEng.nextUID(), temptf, up, 0.0f);
+        groundPhysObj.setBounciness(0.1f);
+        //groundNode.scale(3f, 0.05f, 3f);
+        //groundNode.setLocalPosition(0, -2, 0);
+        groundNode.setPhysicsObject(groundPhysObj);
+
+        tempm = dolphinN_1.getLocalTransform();
+        tempm.scale(Vector3f.createFrom(0.0f, 0.0f, 0.0f));
+        temptf = toDoubleArray(tempm.toFloatArray());
+        dolphinPO_1 = physicsEng.addSphereObject(physicsEng.nextUID(), mass, temptf, 2.0f);
+        dolphinPO_1.setBounciness(0.1f);
+        dolphinN_1.setPhysicsObject(dolphinPO_1);
+    }
+
+    private double[] toDoubleArray(float[] arr){
+        if(arr == null) return null;
+        int n = arr.length;
+        double[] ret = new double[n];
+        for(int i = 0; i < n; ++i) ret[i] = (double)arr[i];
+        return ret;
+    }
+
+    private float[] toFloatArray(double[] arr){
+        if(arr == null) return null;
+        int n = arr.length;
+        float[] ret = new float[n];
+        for(int i = 0; i < n; ++i) ret[i] = (float)arr[i];
+        return ret;
     }
 }
