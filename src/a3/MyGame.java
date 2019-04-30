@@ -11,6 +11,7 @@ import ray.input.GenericInputManager;
 import ray.input.InputManager;
 import ray.networking.IGameConnection;
 import ray.rage.Engine;
+import ray.rage.asset.material.Material;
 import ray.rage.asset.texture.Texture;
 import ray.rage.asset.texture.TextureManager;
 import ray.rage.game.Game;
@@ -74,6 +75,8 @@ public class MyGame extends VariableFrameRateGame {
 
     private boolean alone = true;
 
+    private SkeletalEntity astronaut;
+
     public MyGame(String serverAddr, int sPort, String protocol) {
         super();
         System.out.println("WIN by touching the most planets the fastest. Best of 15 planets.");
@@ -126,6 +129,7 @@ public class MyGame extends VariableFrameRateGame {
 
     @Override
     protected void update(Engine engine) {
+        System.out.println("A");
         // build and set HUD
         rs = (GL4RenderSystem) engine.getRenderSystem();
         int height = rs.getCanvas().getHeight();
@@ -141,7 +145,7 @@ public class MyGame extends VariableFrameRateGame {
         p1CameraController.updateCameraPosition();
 //        p2CameraController.updateCameraPosition();
 
-
+        astronaut.update();
         //Networking, process packets
         processNetworking(elapsedTimeMillis);
     }
@@ -339,14 +343,23 @@ public class MyGame extends VariableFrameRateGame {
         initControllers(sm);
 
         //p1Dolphin
-        Entity dolphinE_1 = sm.createEntity("p1Dolphin", "astronaut.obj");
+//        astronaut = sm.createEntity("astronaut", "astronaut.obj");
+        astronaut = sm.createSkeletalEntity("astronaut","astronautMesh.rkm","astronautSkeleton.rks");
+        astronaut.loadAnimation("run","runAction.rka");
+        astronaut.loadAnimation("idle","idleAction.rka");
+        astronaut.loadAnimation("jump","jumpAction.rka");
+        astronaut.playAnimation("idle",0.2f, SkeletalEntity.EndType.LOOP,0);
 
-        setAstronautTexture(dolphinE_1);
+        Material material = sm.getMaterialManager().getAssetByPath("astronaut.mtl");
+        astronaut.setMaterial(material);
 
-        dolphinE_1.setPrimitive(Primitive.TRIANGLES);
-        SceneNode dolphinN_1 = sm.getRootSceneNode().createChildSceneNode(dolphinE_1.getName() + "Node");
+        setAstronautTexture(astronaut);
+
+        astronaut.setPrimitive(Primitive.TRIANGLES);
+        SceneNode dolphinN_1 = sm.getRootSceneNode().createChildSceneNode("p1Dolphin" + "Node");
         dolphinN_1.moveRight(.5f);
-        dolphinN_1.attachObject(dolphinE_1);
+        dolphinN_1.attachObject(astronaut);
+        dolphinN_1.scale(.3f,.3f,.3f);
         //dolphinE_1.setMaterial(sm.getMaterialManager().getAsset(Paths.get("astronaut.mtl")));
 
         System.out.println(dolphinN_1.getWorldRotation());
