@@ -129,7 +129,6 @@ public class MyGame extends VariableFrameRateGame {
 
     @Override
     protected void update(Engine engine) {
-        System.out.println("A");
         // build and set HUD
         rs = (GL4RenderSystem) engine.getRenderSystem();
         int height = rs.getCanvas().getHeight();
