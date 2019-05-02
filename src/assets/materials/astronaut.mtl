@@ -1,5 +1,5 @@
 # Blender MTL File: 'Astronaut_v0.9.blend'
-# Material Count: 2
+# Material Count: 1
 
 newmtl AstroMainMat
 Ns 2.000000
@@ -10,15 +10,4 @@ Ke 0.0 0.0 0.0
 Ni 0.000000
 d 1.000000
 illum 2
-map_Kd AstronautDiffuse-01.png
-
-newmtl Helmet
-Ns 120.000000
-Ka 1.000000 1.000000 1.000000
-Kd 0.000000 0.000000 0.000000
-Ks 1.000000 1.000000 1.000000
-Ke 0.0 0.0 0.0
-Ni 0.000000
-d 1.000000
-illum 3
 map_Kd AstronautDiffuse-01.png

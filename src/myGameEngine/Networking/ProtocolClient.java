@@ -203,7 +203,7 @@ public class ProtocolClient extends GameConnectionClient {
 
     @Override
     public void sendPacket(Serializable object) throws IOException {
-        System.out.println("SendingPackage: " + object);
+        //System.out.println("SendingPackage: " + object);
         super.sendPacket(object);
     }
 }

@@ -5,6 +5,7 @@ import myGameEngine.Networking.ProtocolClient;
 import net.java.games.input.Event;
 import ray.rage.scene.Node;
 import ray.rage.scene.SceneNode;
+import ray.rml.Vector3;
 
 public class MoveLeftAction extends AbstractConstraintMoveAction {
 
@@ -22,15 +23,15 @@ public class MoveLeftAction extends AbstractConstraintMoveAction {
     public void performAction(float v, Event event) {
         float updates = (v/16f);
         if(event.getValue() > .2f || event.getValue() < -.2f) {
-            float value = event.getValue() * 0.01f*updates;
-            System.out.println("UpAxis in left mov." + nodeToMove.getLocalUpAxis());
-            nodeToMove.moveLeft(-value);
+            float value = event.getValue() * 0.05f*updates;
+            Vector3 pos = nodeToMove.getLocalPosition();
+            nodeToMove.setLocalPosition(pos.x() - value, pos.y(), pos.z());
+            nodeToMove.setLocalRotation(myGame.LEFT);
             //Check boundaries
             if(!isLegal(nodeToMove)){
-                nodeToMove.moveRight(-value);
+                nodeToMove.setLocalPosition(pos.x() + value, pos.y(), pos.z());
             }
             protoClient.sendMoveMessage(nodeToMove.getWorldPosition(),nodeToMove.getWorldForwardAxis());
-            myGame.updateVerticalPosition((SceneNode) nodeToMove);
         }
     }
 }

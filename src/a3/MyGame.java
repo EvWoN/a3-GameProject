@@ -31,6 +31,8 @@ import ray.rage.scene.Camera.Frustum.Projection;
 import ray.rage.scene.controllers.RotationController;
 import ray.rage.util.BufferUtil;
 import ray.rage.util.Configuration;
+import ray.rml.Matrix3;
+import ray.rml.Matrix3f;
 import ray.rml.Vector3;
 import ray.rml.Vector3f;
 
@@ -68,20 +70,36 @@ public class MyGame extends VariableFrameRateGame {
     private RotationController rc;
     private SquishyBounceController sc;
 
-    private OrbitCameraController p1CameraController;
-    private OrbitCameraController p2CameraController;
-
     private float elapsTime = 0.0f;
 
     private boolean alone = true;
 
-    private SkeletalEntity astronaut;
+    private SceneNode astronautNode;
+    private SkeletalEntity astronautSkeleton;
+
+    public Matrix3 LEFT = Matrix3f.createFrom(
+            Vector3f.createFrom(0.0f, 0.0f, 1.0f),
+            Vector3f.createFrom(0.0f, 1.0f, 0.0f),
+            Vector3f.createFrom(-1.0f, 0.0f, 0.0f)
+    );
+    public Matrix3 RIGHT = Matrix3f.createFrom(
+            Vector3f.createFrom(0.0f, 0.0f, 1.0f),
+            Vector3f.createFrom(0.0f, 1.0f, 0.0f),
+            Vector3f.createFrom(1.0f, 0.0f, 0.0f)
+    );
+    public Matrix3 UP = Matrix3f.createFrom(
+            Vector3f.createFrom(1.0f, 0.0f, 0.0f),
+            Vector3f.createFrom(0.0f, 1.0f, 0.0f),
+            Vector3f.createFrom(0.0f, 0.0f, 1.0f)
+    );
+    public Matrix3 DOWN = Matrix3f.createFrom(
+            Vector3f.createFrom(1.0f, 0.0f, 0.0f),
+            Vector3f.createFrom(0.0f, 1.0f, 0.0f),
+            Vector3f.createFrom(0.0f, 0.0f, -1.0f)
+    );
 
     public MyGame(String serverAddr, int sPort, String protocol) {
         super();
-        System.out.println("WIN by touching the most planets the fastest. Best of 15 planets.");
-        System.out.println("Player 1: Keyboard: WASD to move around, E/Q to strafe, SHIFT/CTRL for dive up and down, </> to zoom in and out, Arrow keys to look around");
-        System.out.println("Player 2: Controller: LEFT_STICK to move around, RIGHT_STICK to look around, Back Z_PEDALS to dive up and down, Buttons 4/5 to turn left and right, Buttons 1/2 to zoom in and out ");
         this.serverAddress = serverAddr;
         this.serverPort = sPort;
         if (protocol.toUpperCase().compareTo("UDP") == 0) {
@@ -129,23 +147,12 @@ public class MyGame extends VariableFrameRateGame {
 
     @Override
     protected void update(Engine engine) {
-        System.out.println("A");
         // build and set HUD
         rs = (GL4RenderSystem) engine.getRenderSystem();
         int height = rs.getCanvas().getHeight();
-
-//        ps.updateScores();
-//        String dispStr1 = "Score = " + ps.getP1Score();
-//        String dispStr2 = "Score = " + ps.getP2Score();
-
-//        rs.setHUD(dispStr1, 20, height / 2 + 20);
-//        rs.setHUD2(dispStr2, 20, 20);
         float elapsedTimeMillis = engine.getElapsedTimeMillis();
         im.update(elapsedTimeMillis);
-        p1CameraController.updateCameraPosition();
-//        p2CameraController.updateCameraPosition();
-
-        astronaut.update();
+        astronautSkeleton.update();
         //Networking, process packets
         processNetworking(elapsedTimeMillis);
     }
@@ -166,9 +173,7 @@ public class MyGame extends VariableFrameRateGame {
         System.out.println("SetupWindowViewports");
         rw.addKeyListener(this);
         Viewport topViewport = rw.getViewport(0);
-//        topViewport.setDimensions(.51f, .01f, .99f, .49f);
         topViewport.setClearColor(new Color(.1f, .1f, .1f));
-
     }
 
     @Override
@@ -183,121 +188,43 @@ public class MyGame extends VariableFrameRateGame {
 
     protected void setupControls(SceneManager sm) {
         System.out.println("SetupControls");
-        im = new GenericInputManager();
+        //im = new GenericInputManager();
         ArrayList<Controller> controllers = im.getControllers();
 
-        //Player 1: Link and setup controls
-        Camera player1Camera = sm.getCamera("Player1Camera");
-        SceneNode p1DolphinNode = sm.getSceneNode("p1DolphinNode");
-        p1CameraController = new OrbitCameraController(player1Camera, player1Camera.getParentNode(), p1DolphinNode);
-
-
         //Actions
-        MoveForwardAction moveForwardAction = new MoveForwardAction(this, p1DolphinNode,protClient);
-        MoveBackwardAction moveBackwardAction = new MoveBackwardAction(this, p1DolphinNode, protClient);
-        MoveRightAction moveRightAction = new MoveRightAction(this, p1DolphinNode,protClient);
-        MoveLeftAction moveLeftAction = new MoveLeftAction(this, p1DolphinNode,protClient);
-        RotateDownAction rotateDownAction = new RotateDownAction(p1DolphinNode);
-        RotateUpAction rotateUpAction = new RotateUpAction(p1DolphinNode);
-        RotateLeftAction rotateLeftAction = new RotateLeftAction(p1DolphinNode,protClient);
-        RotateRightAction rotateRightAction = new RotateRightAction(p1DolphinNode,protClient);
+        MoveUpAction moveUpAction = new MoveUpAction            (this, astronautNode, protClient);
+        MoveDownAction moveDownAction = new MoveDownAction      (this, astronautNode, protClient);
+        MoveRightAction moveRightAction = new MoveRightAction   (this, astronautNode, protClient);
+        MoveLeftAction moveLeftAction = new MoveLeftAction      (this, astronautNode,protClient);
 
         for (Controller c : controllers) {
             if (c.getType() == Controller.Type.KEYBOARD) {
                 im.associateAction(
                         c,
                         Component.Identifier.Key.W,
-                        moveForwardAction,
+                        moveUpAction,
                         InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
                 );
                 im.associateAction(
                         c,
                         Component.Identifier.Key.S,
-                        moveBackwardAction,
-                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
-                );
-                im.associateAction(
-                        c,
-                        Component.Identifier.Key.E,
-                        moveRightAction,
-                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
-                );
-                im.associateAction(
-                        c,
-                        Component.Identifier.Key.Q,
-                        moveLeftAction,
-                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
-                );
-                im.associateAction(
-                        c,
-                        Component.Identifier.Key.LCONTROL,
-                        rotateDownAction,
-                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
-                );
-                im.associateAction(
-                        c,
-                        Component.Identifier.Key.LSHIFT,
-                        rotateUpAction,
-                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
-                );
-                im.associateAction(
-                        c,
-                        Component.Identifier.Key.A,
-                        rotateLeftAction,
+                        moveDownAction,
                         InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
                 );
                 im.associateAction(
                         c,
                         Component.Identifier.Key.D,
-                        rotateRightAction,
+                        moveRightAction,
                         InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
                 );
-
-                p1CameraController.setupInput(im, c);
+                im.associateAction(
+                        c,
+                        Component.Identifier.Key.A,
+                        moveLeftAction,
+                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
+                );
             }
         }
-
-//        moveBackwardAction = new MoveBackwardAction(p2DolphinNode);
-//        moveRightAction = new MoveRightAction(p2DolphinNode);
-//        rotateUpAction = new RotateUpAction(p2DolphinNode);
-//        rotateLeftAction = new RotateLeftAction(p2DolphinNode);
-//        rotateRightAction = new RotateRightAction(p2DolphinNode);
-//
-//        for (Controller c : controllers) {
-//            if (c.getType() == Controller.Type.GAMEPAD || c.getType() == Controller.Type.STICK) {
-//                im.associateAction(
-//                        c,
-//                        Component.Identifier.Axis.Y,
-//                        moveBackwardAction,
-//                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
-//                );
-//                im.associateAction(
-//                        c,
-//                        Component.Identifier.Axis.X,
-//                        moveRightAction,
-//                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
-//                );
-//                im.associateAction(
-//                        c,
-//                        Component.Identifier.Axis.Z,
-//                        rotateUpAction,
-//                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
-//                );
-//                im.associateAction(
-//                        c,
-//                        Component.Identifier.Button._4,
-//                        rotateLeftAction,
-//                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
-//                );
-//                im.associateAction(
-//                        c,
-//                        Component.Identifier.Button._5,
-//                        rotateRightAction,
-//                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
-//                );
-//                p2CameraController.setupInput(im, c);
-//            }
-//        }
     }
 
     @Override
@@ -305,17 +232,16 @@ public class MyGame extends VariableFrameRateGame {
         System.out.println("SetupCamera");
         SceneNode rootNode = sm.getRootSceneNode();
 
-        //Player 1 Camera
-        Camera p1Camera = sm.createCamera("Player1Camera", Projection.PERSPECTIVE);
-        rw.getViewport(0).setCamera(p1Camera);
-        SceneNode p1CameraNode = rootNode.createChildSceneNode(p1Camera.getName() + "Node");
-        p1CameraNode.attachObject(p1Camera);
-        p1Camera.setMode('n');
-        p1Camera.setRt((Vector3f) Vector3f.createFrom(1.0f, 0.0f, 0.0f));
-        p1Camera.setUp((Vector3f) Vector3f.createFrom(0.0f, 1.0f, 0.0f));
-        p1Camera.setFd((Vector3f) Vector3f.createFrom(0.0f, 0.0f, -1.0f));
-        p1Camera.setPo((Vector3f) Vector3f.createFrom(0f, 0f, 0f));
-
+        //Camera
+        Camera camera = sm.createCamera("Camera", Projection.PERSPECTIVE);
+        rw.getViewport(0).setCamera(camera);
+        SceneNode p1CameraNode = rootNode.createChildSceneNode(camera.getName() + "Node");
+        p1CameraNode.attachObject(camera);
+        camera.setMode('c');
+        camera.setRt((Vector3f) Vector3f.createFrom(1.0f, 0.0f, 0.0f));
+        camera.setUp((Vector3f) Vector3f.createFrom(0.0f, 0.0f, 1.0f));
+        camera.setFd((Vector3f) Vector3f.createFrom(0.0f, -1.0f, 0.0f));
+        camera.setPo((Vector3f) Vector3f.createFrom(0f, 10f, 0f));
     }
 
     protected void initControllers(SceneManager sm) {
@@ -335,64 +261,66 @@ public class MyGame extends VariableFrameRateGame {
         this.sm = sm;
         this.eng = eng;
 
-        ScriptEngineManager scriptManager = new ScriptEngineManager();
-        String scriptName = "PlanetGen.js";
-        List<ScriptEngineFactory> scriptList = scriptManager.getEngineFactories();
-        ScriptEngine scriptEngine = scriptManager.getEngineByName("js");
-
         initControllers(sm);
 
-        //p1Dolphin
-//        astronaut = sm.createEntity("astronaut", "astronaut.obj");
-        astronaut = sm.createSkeletalEntity("astronaut","astronautMesh.rkm","astronautSkeleton.rks");
-        astronaut.loadAnimation("run","runAction.rka");
-        astronaut.loadAnimation("idle","idleAction.rka");
-        astronaut.loadAnimation("jump","jumpAction.rka");
-        astronaut.playAnimation("idle",0.2f, SkeletalEntity.EndType.LOOP,0);
+        astronautSkeleton = rigSkeleton("astronaut", "run", "jump", "idle");
 
-        Material material = sm.getMaterialManager().getAssetByPath("astronaut.mtl");
-        astronaut.setMaterial(material);
-
-        setAstronautTexture(astronaut);
-
-        astronaut.setPrimitive(Primitive.TRIANGLES);
-        SceneNode dolphinN_1 = sm.getRootSceneNode().createChildSceneNode("p1Dolphin" + "Node");
-        dolphinN_1.moveRight(.5f);
-        dolphinN_1.attachObject(astronaut);
-        dolphinN_1.scale(.3f,.3f,.3f);
-        //dolphinE_1.setMaterial(sm.getMaterialManager().getAsset(Paths.get("astronaut.mtl")));
-
-        System.out.println(dolphinN_1.getWorldRotation());
+        astronautNode = sm.getRootSceneNode().createChildSceneNode("astronautNode");
+        astronautNode.attachObject(astronautSkeleton);
+        astronautNode.scale(0.3f, 0.3f, 0.3f);
+        setAstronautTexture(astronautSkeleton);
 
         //Scene axis
         showAxis(eng, sm);
 
-        /*
         //Ground floor
         SceneNode groundFloor = makeGroundFloor(eng, sm);
         groundFloor.moveDown(.5f);
         groundFloor.scale(10f, 10f, 10f);
-        */
-        Tessellation tessE = sm.createTessellation("TessE", 6);
-        tessE.setSubdivisions(8f);
-        SceneNode tessN = sm.getRootSceneNode().createChildSceneNode("TessN");
-        tessN.attachObject(tessE);
-        tessN.scale(10, 50, 10);
-        tessE.setHeightMap(this.getEngine(), "AnotherHeightMap.jpg");
-        tessE.setTexture(this.getEngine(), "moon.jpeg");
 
+        setupLighting();
 
-        //Make planets
-        SceneNode planetsParentNode = sm.getRootSceneNode().createChildSceneNode("planetsCenterNode");
+        //Make Skybox
+        SkyBox startBox = makeSkyBox("red");
+        sm.setActiveSkyBox(startBox);
+        setupControls(sm);
+    }
 
-        runScript(scriptEngine, scriptName);
-        int numOfPlanets = (int) scriptEngine.get("numPlanets");
-        for (int i = 0; i < numOfPlanets; i++) {
-            SceneNode randPlanet = generateRandPlanet(eng, sm, planetsParentNode);
-//            ps.addPointNode(randPlanet);
+    private SkeletalEntity rigSkeleton(String name, String... actions) throws IOException {
+        Material material = sm.getMaterialManager().getAssetByPath(name.concat(".mtl"));
+        SkeletalEntity skeleton = sm.createSkeletalEntity(name, name.concat("Mesh.rkm"), name.concat("Skeleton.rks"));
+        for(String action : actions)
+            skeleton.loadAnimation(action, action.concat("Action.rka"));
+        skeleton.playAnimation("idle",1.0f, SkeletalEntity.EndType.LOOP,0);
+        skeleton.setMaterial(material);
+        skeleton.setPrimitive(Primitive.TRIANGLES);
+        bindAnim(skeleton);
+        return skeleton;
+    }
+
+    private void bindAnim (SkeletalEntity skeleton) {
+        im = new GenericInputManager();
+        ArrayList<Controller> controllers = im.getControllers();
+
+        StartAnimationAction startAnimationAction = new StartAnimationAction(
+                skeleton,
+                "run",
+                1.0f,
+                SkeletalEntity.EndType.LOOP,
+                0);
+
+        for(Controller c : controllers) {
+            if (c.getType() == Controller.Type.KEYBOARD)
+                im.associateAction(
+                        c,
+                        Component.Identifier.Key.Q,
+                        startAnimationAction,
+                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
+                );
         }
+    }
 
-        //Lighting
+    private void setupLighting() {
         sm.getAmbientLight().setIntensity(new Color(.1f, .1f, .1f));
         Light plight = sm.createLight("testLamp1", Light.Type.POINT);
         plight.setAmbient(new Color(.5f, .5f, .5f));
@@ -401,13 +329,6 @@ public class MyGame extends VariableFrameRateGame {
         plight.setRange(20f);
         SceneNode plightNode = sm.getRootSceneNode().createChildSceneNode("plightNode");
         plightNode.attachObject(plight);
-
-        //Make Skybox
-        SkyBox startBox = makeSkyBox("red");
-
-        sm.setActiveSkyBox(startBox);
-
-        setupControls(sm);
     }
 
     private void runScript(ScriptEngine engine, String fileName) {
@@ -426,7 +347,7 @@ public class MyGame extends VariableFrameRateGame {
     //If you have a sub-folder "red" inside of "skyboxes" the path should be "red"
     //If it is multiple folders deep, do not include the last "/" ie "space/galaxies/red"
     private SkyBox makeSkyBox(String path) throws IOException {
-        //Skybox software liscensed freely from https://github.com/wwwtyro/space-3d/blob/gh-pages/LICENSE
+        //Skybox software licensed freely from https://github.com/wwwtyro/space-3d/blob/gh-pages/LICENSE
         Engine eng = getEngine();
         SceneManager sm = eng.getSceneManager();
         Configuration conf = eng.getConfiguration();
@@ -484,69 +405,6 @@ public class MyGame extends VariableFrameRateGame {
         lineZ.setPrimitive(Primitive.LINES);
         SceneNode lineZN = sm.getRootSceneNode().createChildSceneNode(lineZ.getName() + "Node");
         lineZN.attachObject(lineZ);
-    }
-
-    @Override
-    public void keyPressed(KeyEvent e) {
-    }
-
-    private int PlanetNum = 0;
-
-    public SceneNode generateRandPlanet(Engine eng, SceneManager sm, Node parentNode) throws IOException {
-        //Basic attributes
-        float minDistance = 1f, maxDistance = 10f, minSize = .1f, maxSize = .2f;
-        Random r = new Random();
-
-        Entity planetE = sm.createEntity("myPlanet_" + PlanetNum++, "earth.obj");
-
-        //Set up texture
-        String textureName = "";
-        switch (r.nextInt(5)) {
-            case 0:
-                textureName = "earth-day.jpeg";
-                break;
-            case 1:
-                textureName = "earth-night.jpeg";
-                break;
-            case 2:
-                textureName = "moon.jpeg";
-                break;
-            case 3:
-                textureName = "red.jpeg";
-                break;
-            case 4:
-                textureName = "sun.jpeg";
-                break;
-        }
-
-        planetE.setPrimitive(Primitive.TRIANGLES);
-        Texture tex = eng.getTextureManager().getAssetByPath(textureName);
-        TextureState texState = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
-        texState.setTexture(tex);
-        planetE.setRenderState(texState);
-
-        //Build node into world
-        SceneNode planetN = sm.getRootSceneNode().createChildSceneNode(planetE.getName() + "Node");
-        planetN.attachObject(planetE);
-        parentNode.attachChild(planetN);
-
-        //Set Random distance from origin
-        float[] sizes = new float[3];
-        for (int i = 0; i < sizes.length; i++) {
-            float newDistance = minDistance + r.nextFloat() * (maxDistance - minDistance);
-            //Polarity
-            if (i != 1 && r.nextBoolean()) {
-                newDistance = newDistance * -1;
-            }
-            sizes[i] = (newDistance);
-        }
-        planetN.setLocalPosition(sizes[0], sizes[1], sizes[2]);
-
-        //Generating random scale
-        float random = minSize + r.nextFloat() * (maxSize - minSize);
-        planetN.setLocalScale(random, random, random);
-        //Returning value
-        return planetN;
     }
 
     private SceneNode makeGroundFloor(Engine eng, SceneManager sm) throws IOException {
@@ -665,58 +523,8 @@ public class MyGame extends VariableFrameRateGame {
         return lineX;
     }
 
-    protected ManualObject makePyramid(Engine eng, SceneManager sm) throws IOException {
-        ManualObject pyr = sm.createManualObject("Pyramid");
-        ManualObjectSection pyrSec =
-                pyr.createManualSection("PyramidSection");
-        pyr.setGpuShaderProgram(sm.getRenderSystem().
-                getGpuShaderProgram(GpuShaderProgram.Type.RENDERING));
-        float[] vertices = new float[]
-                {-1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f, //front
-                        1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f, //right
-                        1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f, //back
-                        -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f, //left
-                        -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, //LF
-                        1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f //RR
-                };
-        float[] texcoords = new float[]
-                {0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
-                        0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
-                        0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
-                        0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
-                        0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
-                        1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f
-                };
-        float[] normals = new float[]
-                {0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f,
-                        1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f,
-                        0.0f, 1.0f, -1.0f, 0.0f, 1.0f, -1.0f, 0.0f, 1.0f, -1.0f,
-                        -1.0f, 1.0f, 0.0f, -1.0f, 1.0f, 0.0f, -1.0f, 1.0f, 0.0f,
-                        0.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f,
-                        0.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, -1.0f, 0.0f
-                };
-        int[] indices = new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17};
-        FloatBuffer vertBuf = BufferUtil.directFloatBuffer(vertices);
-        FloatBuffer texBuf = BufferUtil.directFloatBuffer(texcoords);
-        FloatBuffer normBuf = BufferUtil.directFloatBuffer(normals);
-        IntBuffer indexBuf = BufferUtil.directIntBuffer(indices);
-        pyrSec.setVertexBuffer(vertBuf);
-        pyrSec.setTextureCoordsBuffer(texBuf);
-        pyrSec.setNormalsBuffer(normBuf);
-        pyrSec.setIndexBuffer(indexBuf);
-        Texture tex = eng.getTextureManager().getAssetByPath("chain-fence.jpeg");
-        TextureState texState = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
-        texState.setTexture(tex);
-        FrontFaceState faceState = (FrontFaceState) sm.getRenderSystem().
-                createRenderState(RenderState.Type.FRONT_FACE);
-        pyr.setDataSource(Renderable.DataSource.INDEX_BUFFER);
-        pyr.setRenderState(texState);
-        pyr.setRenderState(faceState);
-        return pyr;
-    }
-
     public void setIsConnected(boolean b) {
-
+        isClientConnected = b;
     }
 
     public Vector3 getPlayerPosition() {
@@ -766,23 +574,6 @@ public class MyGame extends VariableFrameRateGame {
         sm.destroySceneNode(avatar.getNode());
     }
 
-    public void updateVerticalPosition(SceneNode obj){
-        SceneNode tessN = this.getEngine().getSceneManager().getSceneNode("TessN");
-        Tessellation tessE = ((Tessellation) tessN.getAttachedObject("TessE"));
-        Vector3 worldObjectPosition = obj.getWorldPosition();
-        Vector3 localObjectPoistion = obj.getLocalPosition();
-
-        Vector3 newObjectPosition  = Vector3f.createFrom(
-                localObjectPoistion.x(),
-                tessE.getWorldHeight(
-                        worldObjectPosition.x(),
-                        worldObjectPosition.z()),
-                localObjectPoistion.z()
-        );
-
-        obj.setLocalPosition(newObjectPosition);
-    }
-
     private void setAstronautTexture(Entity astronaut) {
         String fileName = (alone) ? "AstronautDiffuse-01.png" : "AstronautDiffuse-02.png";
         try {
@@ -790,6 +581,7 @@ public class MyGame extends VariableFrameRateGame {
             TextureState texState = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
             texState.setTexture(tex);
             astronaut.setRenderState(texState);
+            astronaut.setPrimitive(Primitive.TRIANGLES);
         }
         catch(IOException e) { System.out.println(fileName + " not found."); }
     }

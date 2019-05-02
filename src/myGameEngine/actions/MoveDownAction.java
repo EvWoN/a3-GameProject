@@ -5,14 +5,15 @@ import myGameEngine.Networking.ProtocolClient;
 import net.java.games.input.Event;
 import ray.rage.scene.Node;
 import ray.rage.scene.SceneNode;
+import ray.rml.Vector3;
 
-public class MoveForwardAction extends AbstractConstraintMoveAction {
+public class MoveDownAction extends AbstractConstraintMoveAction {
 
     private MyGame myGame;
     private Node nodeToMove;
     ProtocolClient protoClient;
 
-    public MoveForwardAction(MyGame game, Node c, ProtocolClient protocolClient) {
+    public MoveDownAction(MyGame game, Node c, ProtocolClient protocolClient) {
         myGame = game;
         nodeToMove = c;
         protoClient = protocolClient;
@@ -23,10 +24,12 @@ public class MoveForwardAction extends AbstractConstraintMoveAction {
         float updates = (v/16f);
         if(event.getValue() > .2f || event.getValue() < -.2f) {
             float value = event.getValue() * 0.05f*updates;
-            nodeToMove.moveForward(value);
+            Vector3 pos = nodeToMove.getLocalPosition();
+            nodeToMove.setLocalPosition(pos.x(), pos.y(), pos.z() - value);
+            nodeToMove.setLocalRotation(myGame.DOWN);
             //Check boundaries
             if(!isLegal(nodeToMove)){
-                nodeToMove.moveBackward(value);
+                nodeToMove.setLocalPosition(pos.x(), pos.y(), pos.z() + value);
             }
             protoClient.sendMoveMessage(nodeToMove.getWorldPosition(),nodeToMove.getWorldForwardAxis());
         }
