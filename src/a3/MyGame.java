@@ -31,15 +31,13 @@ import ray.rage.scene.Camera.Frustum.Projection;
 import ray.rage.scene.controllers.RotationController;
 import ray.rage.util.BufferUtil;
 import ray.rage.util.Configuration;
-import ray.rml.Matrix3;
-import ray.rml.Matrix3f;
-import ray.rml.Vector3;
-import ray.rml.Vector3f;
+import ray.rml.*;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineFactory;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
+import javax.vecmath.AxisAngle4f;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.geom.AffineTransform;
@@ -73,12 +71,16 @@ public class MyGame extends VariableFrameRateGame {
     private float elapsTime = 0.0f;
 
     private boolean alone = true;
+    private boolean holdingItem = false;
 
     private SceneNode astronautNode;
     private SkeletalEntity astronautSkeleton;
 
+    private ArrayList<SceneNode> partsList;
+
+    //Forward, up, right
     public Matrix3 LEFT = Matrix3f.createFrom(
-            Vector3f.createFrom(0.0f, 0.0f, 1.0f),
+            Vector3f.createFrom(0.0f, 0.0f, -1.0f),
             Vector3f.createFrom(0.0f, 1.0f, 0.0f),
             Vector3f.createFrom(-1.0f, 0.0f, 0.0f)
     );
@@ -88,7 +90,7 @@ public class MyGame extends VariableFrameRateGame {
             Vector3f.createFrom(1.0f, 0.0f, 0.0f)
     );
     public Matrix3 UP = Matrix3f.createFrom(
-            Vector3f.createFrom(1.0f, 0.0f, 0.0f),
+            Vector3f.createFrom(-1.0f, 0.0f, 0.0f),
             Vector3f.createFrom(0.0f, 1.0f, 0.0f),
             Vector3f.createFrom(0.0f, 0.0f, 1.0f)
     );
@@ -154,6 +156,7 @@ public class MyGame extends VariableFrameRateGame {
         im.update(elapsedTimeMillis);
         astronautSkeleton.update();
         //Networking, process packets
+        pickupItems();
         processNetworking(elapsedTimeMillis);
     }
 
@@ -239,9 +242,9 @@ public class MyGame extends VariableFrameRateGame {
         p1CameraNode.attachObject(camera);
         camera.setMode('c');
         camera.setRt((Vector3f) Vector3f.createFrom(1.0f, 0.0f, 0.0f));
-        camera.setUp((Vector3f) Vector3f.createFrom(0.0f, 0.0f, 1.0f));
-        camera.setFd((Vector3f) Vector3f.createFrom(0.0f, -1.0f, 0.0f));
-        camera.setPo((Vector3f) Vector3f.createFrom(0f, 10f, 0f));
+        camera.setUp((Vector3f) Vector3f.createFrom(0.0f, 1.0f, 0.0f));
+        camera.setFd((Vector3f) Vector3f.createFrom(0.0f, 0.0f, 1.0f));
+        camera.setPo((Vector3f) Vector3f.createFrom(0f, 0f, -5f));
     }
 
     protected void initControllers(SceneManager sm) {
@@ -268,6 +271,7 @@ public class MyGame extends VariableFrameRateGame {
         astronautNode = sm.getRootSceneNode().createChildSceneNode("astronautNode");
         astronautNode.attachObject(astronautSkeleton);
         astronautNode.scale(0.3f, 0.3f, 0.3f);
+        astronautNode.setLocalRotation(UP);
         setAstronautTexture(astronautSkeleton);
 
         //Scene axis
@@ -283,6 +287,11 @@ public class MyGame extends VariableFrameRateGame {
         //Make Skybox
         SkyBox startBox = makeSkyBox("red");
         sm.setActiveSkyBox(startBox);
+
+        sc = new SquishyBounceController();
+        sm.addController(sc);
+
+        makeParts();
         setupControls(sm);
     }
 
@@ -386,7 +395,6 @@ public class MyGame extends VariableFrameRateGame {
         return skyBox;
     }
 
-
     private void showAxis(Engine eng, SceneManager sm) throws IOException {
         //lineX
         ManualObject lineX = makeXIndicator(eng, sm);
@@ -438,7 +446,7 @@ public class MyGame extends VariableFrameRateGame {
         return groundFloorNode;
     }
 
-    public ManualObject makeXIndicator(Engine eng, SceneManager sm) throws IOException {
+    private ManualObject makeXIndicator(Engine eng, SceneManager sm) throws IOException {
         ManualObject lineX = sm.createManualObject("xLine");
         ManualObjectSection lineXSect = lineX.createManualSection("xLineSection");
         lineX.setGpuShaderProgram(sm.getRenderSystem().getGpuShaderProgram(GpuShaderProgram.Type.RENDERING));
@@ -466,7 +474,7 @@ public class MyGame extends VariableFrameRateGame {
         return lineX;
     }
 
-    public ManualObject makeYIndicator(Engine eng, SceneManager sm) throws IOException {
+    private ManualObject makeYIndicator(Engine eng, SceneManager sm) throws IOException {
         ManualObject lineX = sm.createManualObject("yLine");
         ManualObjectSection lineXSect = lineX.createManualSection("yLineSection");
         lineX.setGpuShaderProgram(sm.getRenderSystem().getGpuShaderProgram(GpuShaderProgram.Type.RENDERING));
@@ -495,7 +503,7 @@ public class MyGame extends VariableFrameRateGame {
         return lineX;
     }
 
-    public ManualObject makeZIndicator(Engine eng, SceneManager sm) throws IOException {
+    private ManualObject makeZIndicator(Engine eng, SceneManager sm) throws IOException {
         ManualObject lineX = sm.createManualObject("zLine");
         ManualObjectSection lineXSect = lineX.createManualSection("zLineSection");
         lineX.setGpuShaderProgram(sm.getRenderSystem().getGpuShaderProgram(GpuShaderProgram.Type.RENDERING));
@@ -521,6 +529,52 @@ public class MyGame extends VariableFrameRateGame {
         lineX.setRenderState(texState);
         lineX.setRenderState(faceState);
         return lineX;
+    }
+
+    private void makeParts() throws IOException {
+        int numParts = 1;
+        partsList = new ArrayList<SceneNode>();
+        Entity entity;
+        SceneNode node;
+        for(int i = 0; i < numParts; ++i){
+            entity = sm.createEntity("PartEntity" + Integer.toString(i), "Thruster.obj");
+            entity.setPrimitive(Primitive.TRIANGLES);
+            node = sm.getRootSceneNode().createChildSceneNode("PartNode" +Integer.toString(i));
+            node.attachObject(entity);
+            node.setLocalPosition(-2.0f, 0.25f , 0.0f);
+            node.setLocalScale(.25f, .25f, .25f);
+            node.setLocalRotation(UP);
+            sc.addNode(node);
+            partsList.add(node);
+        }
+    }
+
+    private void pickupItems() {
+        if (holdingItem) return;
+        for(SceneNode node : partsList){
+            if(close(node, astronautNode)) {
+                holdingItem = true;
+                astronautNode.attachChild(node);
+                node.setLocalPosition(0.0f, 3.0f, 0.0f);
+            }
+        }
+    }
+
+    private boolean close(SceneNode node1, SceneNode node2){
+        Vector3 a, b;
+        float distance, minimum;
+        float dx, dz;
+        a = node1.getLocalPosition();
+        b = node2.getLocalPosition();
+        minimum = 1.0f;
+        minimum *= minimum;
+        dx = a.x() - b.x();
+        dz = a.z() - b.z();
+        dx *= dx;
+        dz *= dx;
+        distance = dx + dz;
+        distance *= distance;
+        return distance <= minimum;
     }
 
     public void setIsConnected(boolean b) {
