@@ -29,7 +29,7 @@ public class ThrowItemAction extends AbstractInputAction {
         SceneNode root = (SceneNode) thrower.getParent();
         Vector3 worldPosition, localScale;
         Matrix3 worldRotation;
-           SceneNode hold;
+        SceneNode hold;
         while(children.hasNext()) {
             hold = (SceneNode) children.next();
             if(hold.getName().startsWith("Part"))
