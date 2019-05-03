@@ -5,15 +5,12 @@ import net.java.games.input.Event;
 import ray.input.action.AbstractInputAction;
 import ray.physics.PhysicsEngine;
 import ray.physics.PhysicsObject;
-import ray.rage.rendersystem.Renderable;
-import ray.rage.scene.Entity;
 import ray.rage.scene.Node;
 import ray.rage.scene.SceneManager;
 import ray.rage.scene.SceneNode;
 import ray.rml.Matrix3;
 import ray.rml.Vector3;
 
-import java.io.IOException;
 import java.util.Iterator;
 
 public class ThrowItemAction extends AbstractInputAction {
@@ -58,14 +55,15 @@ public class ThrowItemAction extends AbstractInputAction {
                         temptf,
                         .5f
                 );
-                physicsObject.setBounciness(1.0f);
+                physicsObject.setBounciness(0.8f);
+                physicsObject.setFriction(.1f);
                 hold.setPhysicsObject(physicsObject);
                 sc.removeNode(hold);
                 root.attachChild(hold);
                 hold.getPhysicsObject().applyForce(
-                        thrower.getLocalForwardAxis().x() * 50,
-                        thrower.getLocalForwardAxis().y() * 50,
-                        thrower.getLocalForwardAxis().z() * 50,
+                        thrower.getLocalForwardAxis().x() * 100,
+                        thrower.getLocalForwardAxis().y() * 100,
+                        thrower.getLocalForwardAxis().z() * 100,
                         hold.getLocalPosition().x(),
                         hold.getLocalPosition().y(),
                         hold.getLocalPosition().z()

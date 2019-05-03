@@ -17,9 +17,9 @@ public class OrbitCameraController {
     private Node target;//the target the camera looks at
     private float cameraAzimuth;//rotation of camera around Y axis
     private float cameraElevation;//elevation of camera above target
-    private float minElev = -50f, maxElev = 80f;//Elevation constraints in deg
+    private float minElev = 5f, maxElev = 80f;//Elevation constraints in deg
     private float radius;//distance between camera and target
-    private float minRad = 1f, maxRad = 3f;//radius constraints
+    private float minRad = 5f, maxRad = 15f;//radius constraints
     private Vector3 targetPos;//target’s position in the world
     private Vector3 worldUpVec;
     
@@ -29,7 +29,7 @@ public class OrbitCameraController {
         target = targ;
         cameraAzimuth = 180.0f;// start from BEHIND and ABOVE the target
         cameraElevation = 20.0f;// elevation is in degrees
-        radius = 2.0f;
+        radius = 8.0f;
         worldUpVec = Vector3f.createFrom(0.0f, 1.0f, 0.0f);
         updateCameraPosition();
     }

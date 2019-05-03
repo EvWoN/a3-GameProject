@@ -246,9 +246,8 @@ public class MyGame extends VariableFrameRateGame {
         
         //CameraOrbitalController
         SceneNode cameraNode = sm.getSceneNode("CameraNode");
-        SceneNode astronautNode = sm.getSceneNode("astronautNode");
         Camera camera = sm.getCamera("Camera");
-        occ = new OrbitCameraController(camera,cameraNode,astronautNode);
+        occ = new OrbitCameraController(camera,cameraNode,groundNode);
     
         //Actions
         //Movement
@@ -353,17 +352,20 @@ public class MyGame extends VariableFrameRateGame {
         ballNode.setLocalPosition(0.0f, 2.0f, 0.0f);*/
 
         //Ground floor
-        Entity groundEntity = sm.createEntity("GroundEntity", "platform1.obj");
+        Entity groundEntity = sm.createEntity("GroundEntity", "mainPlatform.obj");
         groundNode = sm.getRootSceneNode().createChildSceneNode("GroundNode");
-        groundNode.attachObject(groundEntity);
-        groundNode.setLocalPosition(0.0f, -1.0f, 0.0f);
+        SceneNode groundMeshNode = sm.createSceneNode("groundMesh");
+        groundMeshNode.attachObject(groundEntity);
+        groundMeshNode.setLocalPosition(0.0f, -9f, 0.0f);
+        groundMeshNode.scale(9f,9f,9f);
+        groundNode.attachChild(groundMeshNode);
+        groundNode.moveDown(.2f);
 
         setupLighting();
 
         //Make Skybox
         SkyBox startBox = makeSkyBox("red");
         sm.setActiveSkyBox(startBox);
-
         sc = new SquishyBounceController();
         sm.addController(sc);
 
@@ -372,6 +374,7 @@ public class MyGame extends VariableFrameRateGame {
         initPhysicsSystem();
         createPhysicsWorld();
         setupControls(sm);
+//        makeGroundFloor(eng,sm);
     }
 
     private SkeletalEntity rigSkeleton(String name, String... actions) throws IOException {
@@ -379,7 +382,7 @@ public class MyGame extends VariableFrameRateGame {
         SkeletalEntity skeleton = sm.createSkeletalEntity(name, name.concat("Mesh.rkm"), name.concat("Skeleton.rks"));
         for(String action : actions)
             skeleton.loadAnimation(action, action.concat("Action.rka"));
-        skeleton.playAnimation("idle",1.0f, SkeletalEntity.EndType.LOOP,0);
+        skeleton.playAnimation("idle",0.4f, SkeletalEntity.EndType.LOOP,0);
         skeleton.setMaterial(material);
         skeleton.setPrimitive(Primitive.TRIANGLES);
         bindAnim(skeleton);
@@ -410,13 +413,37 @@ public class MyGame extends VariableFrameRateGame {
 
     private void setupLighting() {
         sm.getAmbientLight().setIntensity(new Color(.1f, .1f, .1f));
+        
         Light plight = sm.createLight("testLamp1", Light.Type.POINT);
         plight.setAmbient(new Color(.5f, .5f, .5f));
         plight.setDiffuse(new Color(.9f, .9f, .9f));
         plight.setSpecular(new Color(1.0f, 1.0f, 1.0f));
-        plight.setRange(20f);
+        plight.setRange(10f);
         SceneNode plightNode = sm.getRootSceneNode().createChildSceneNode("plightNode");
         plightNode.attachObject(plight);
+        plightNode.moveUp(3f);
+    
+//        Light predlight = sm.createLight("redLamp1", Light.Type.POINT);
+//        predlight.setAmbient(new Color(.5f, .5f, .5f));
+//        predlight.setDiffuse(new Color(.9f, .0f, .0f));
+//        predlight.setSpecular(new Color(.9f, .0f, .0f));
+//        predlight.setRange(10f);
+//        SceneNode predlightNode = sm.getRootSceneNode().createChildSceneNode(predlight.getName() + "Node");
+//        predlightNode.attachObject(predlight);
+//        predlightNode.moveLeft(30f);
+//        predlightNode.moveDown(30f);
+        
+//        Light dlight = sm.createLight("sun", Light.Type.DIRECTIONAL);
+//        dlight.setAmbient(new Color(.1f, .1f, .1f));
+//        dlight.setDiffuse(new Color(.5f, .5f, .5f));
+//        dlight.setSpecular(new Color(.1f, .1f, .1f));
+//        dlight.setRange(50f);
+//        SceneNode dlightNode = sm.getRootSceneNode().createChildSceneNode("dlightNode");
+//        dlightNode.attachObject(dlight);
+//        dlightNode.rotate(Degreef.createFrom(180f), Vector3f.createFrom(0,0,1));
+//        dlightNode.moveUp(2f);
+        
+        
     }
 
     private void runScript(ScriptEngine engine, String fileName) {
@@ -508,7 +535,7 @@ public class MyGame extends VariableFrameRateGame {
         groundFloorSect.setVertexBuffer(BufferUtil.directFloatBuffer(vertices));
         groundFloorSect.setIndexBuffer(BufferUtil.directIntBuffer(indices));
         //Texture
-        Texture tex = eng.getTextureManager().getAssetByPath("green.png");
+        Texture tex = eng.getTextureManager().getAssetByPath("sun.jpeg");
         TextureState texState = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
         texState.setTexture(tex);
 
@@ -522,6 +549,8 @@ public class MyGame extends VariableFrameRateGame {
         SceneNode groundFloorNode = sm.getRootSceneNode().createChildSceneNode(groundFloorObj.getName() + "Node");
         groundFloorNode.attachObject(groundFloorObj);
 
+        groundFloorNode.moveDown(8f);
+        groundFloorNode.scale(10f,10f,10f);
         return groundFloorNode;
     }
 
@@ -623,7 +652,7 @@ public class MyGame extends VariableFrameRateGame {
             node.setLocalPosition(-2.0f, 0.25f , 0.0f);
             node.setLocalScale(.25f, .25f, .25f);
             node.setLocalRotation(UP);
-            sc.addNode(node);
+//            sc.addNode(node);
             partsList.add(node);
         }
     }
@@ -665,9 +694,10 @@ public class MyGame extends VariableFrameRateGame {
                 temptf,
                 up,
                 0.0f);
-        ground.setBounciness(1.0f);
-//        groundNode.scale(10.0f, .5f, 10.0f);
+        ground.setBounciness(0.2f);
+        ground.setFriction(.2f);
         groundNode.setPhysicsObject(ground);
+        double[] transform = groundNode.getPhysicsObject().getTransform();
         /*
         temptf = toDoubleArray(sm.getRootSceneNode().getChild("BallNode").getLocalTransform().toFloatArray());
         ballObject = physicsEngine.addSphereObject(
