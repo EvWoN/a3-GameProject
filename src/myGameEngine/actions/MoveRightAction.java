@@ -28,7 +28,7 @@ public class MoveRightAction extends AbstractConstraintMoveAction {
             nodeToMove.setLocalRotation(myGame.RIGHT);
             //Check boundaries
             if(!isLegal(nodeToMove)){
-                nodeToMove.setLocalPosition(pos.x() - value, pos.y(), pos.z());
+                nodeToMove.setLocalPosition(pos.x() + value, pos.y(), pos.z());
             }
             protoClient.sendMoveMessage(nodeToMove.getWorldPosition(),nodeToMove.getWorldForwardAxis());
         }

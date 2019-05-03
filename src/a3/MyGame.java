@@ -74,13 +74,13 @@ public class MyGame extends VariableFrameRateGame {
     private boolean holdingItem = false;
     private boolean running = false;
 
-    private SceneNode astronautNode, groundNode;
+    private SceneNode astronautNode, groundNode, ufoNode1, ufoNode2, ballNode;
     private SkeletalEntity astronautSkeleton;
 
     private ArrayList<SceneNode> partsList;
 
     private PhysicsEngine physicsEngine;
-    private PhysicsObject part, ground;
+    private PhysicsObject ball, ground;
 
     Camera camera;
 
@@ -159,24 +159,20 @@ public class MyGame extends VariableFrameRateGame {
     protected void update(Engine engine) {
         // build and set HUD
         rs = (GL4RenderSystem) engine.getRenderSystem();
-        int height = rs.getCanvas().getHeight();
         float elapsedTimeMillis = engine.getElapsedTimeMillis();
         im.update(elapsedTimeMillis);
         occ.updateCameraPosition();
         astronautSkeleton.update();
-        /*if(follow != null)
-        {
-            Vector3 pos = Vector3f.createFrom(
-                    follow.getWorldPosition().x(),
-                    follow.getWorldPosition().y() + 2f,
-                    follow.getWorldPosition().z()
-            );
-            camera.setPo((Vector3f) pos);
-        }*/
-        //Networking, process packets
-        //if(running) updatePhysics();
         updatePhysics();
         pickupItems();
+        //checkItems();
+        moveEnemies();
+        rs.setHUD(
+                astronautNode.getLocalPosition().x() + ", " +
+                astronautNode.getLocalPosition().y() + ", " +
+                astronautNode.getLocalPosition().z()
+        );
+        //Networking, process packet
         processNetworking(elapsedTimeMillis);
     }
 
@@ -196,7 +192,7 @@ public class MyGame extends VariableFrameRateGame {
         if (holdingItem) return;
         SceneNode hold = null;
         for(SceneNode node : partsList){
-            if(isClose(node, astronautNode)) {
+            if(isClose(node, astronautNode, 1.0f)) {
                 holdingItem = true;
                 node.getParent().detachChild(node);
                 astronautNode.attachChild(node);
@@ -210,14 +206,36 @@ public class MyGame extends VariableFrameRateGame {
         if(hold != null) partsList.remove(hold);
     }
 
-    protected void processNetworking(float elapsTime) { // Process packets received by the client from the server
+    private void checkItems() {
+        Iterator<Node> nodeIterator = sm.getRootSceneNode().getChildNodes().iterator();
+        Node node;
+        while(nodeIterator.hasNext())
+        {
+            node = nodeIterator.next();
+            if(node.getPhysicsObject() != null && !node.getName().startsWith("Ground")) {
+                if(isClose((SceneNode) node, groundNode, 8.0f)) {
+                    sm.getRootSceneNode().detachChild(node);
+                }
+            }
+        }
+    }
+
+    private void moveEnemies() {
+        double distance = 8.0f;
+        Vector3 astronautPos = astronautNode.getLocalPosition();
+        ufoNode1.setLocalPosition(
+                (float) (distance * (astronautPos.x() / getDistance(groundNode, astronautNode))),
+                0.0f,
+                (float) (distance * (astronautPos.z() / getDistance(groundNode, astronautNode)))
+        );
+    }
+
+    private void processNetworking(float elapsTime) { // Process packets received by the client from the server
         if (protClient != null)
             protClient.processPackets();
         // remove ghost avatars for players who have left the game
         Iterator<UUID> it = gameObjectsToRemove.iterator();
-        while (it.hasNext()) {
-            sm.destroySceneNode(it.next().toString());
-        }
+        while (it.hasNext()) { sm.destroySceneNode(it.next().toString()); }
         gameObjectsToRemove.clear();
     }
 
@@ -239,7 +257,7 @@ public class MyGame extends VariableFrameRateGame {
         rs.createRenderWindow(new DisplayMode(width, height, 24, 60), false);
     }
 
-    protected void setupControls(SceneManager sm) {
+    private void setupControls(SceneManager sm) {
         System.out.println("SetupControls");
         //im = new GenericInputManager();
         ArrayList<Controller> controllers = im.getControllers();
@@ -315,7 +333,7 @@ public class MyGame extends VariableFrameRateGame {
         camera.setPo((Vector3f) Vector3f.createFrom(0.0f, 5.0f, 0.0f));
     }
 
-    protected void initControllers(SceneManager sm) {
+    private void initControllers(SceneManager sm) {
         sc = new SquishyBounceController();
         rc = new RotationController(Vector3f.createUnitVectorY(), .1f);
         sm.addController(rc);
@@ -344,12 +362,18 @@ public class MyGame extends VariableFrameRateGame {
 
         //Scene axis
         showAxis(eng, sm);
-/*
-        Entity ball = sm.createEntity("Ball", "sphere.obj");
-        ball.setPrimitive(Primitive.TRIANGLES);
-        SceneNode ballNode = sm.getRootSceneNode().createChildSceneNode("BallNode");
-        ballNode.attachObject(ball);
-        ballNode.setLocalPosition(0.0f, 2.0f, 0.0f);*/
+
+        Entity ufo1, ufo2;
+        ufo1 = sm.createEntity("Ufo1", "Ufo.obj");
+        ufo2 = sm.createEntity("Ufo2", "Ufo.obj");
+        ufo1.setPrimitive(Primitive.TRIANGLES);
+        ufo2.setPrimitive(Primitive.TRIANGLES);
+        ufoNode1 = sm.getRootSceneNode().createChildSceneNode("UfoNode1");
+        ufoNode2 = sm.getRootSceneNode().createChildSceneNode("UfoNode2");
+        ufoNode1.attachObject(ufo1);
+        ufoNode2.attachObject(ufo2);
+        ufoNode1.setLocalPosition(8.0f, 0.0f, 0.0f);
+        ufoNode2.setLocalPosition(-8.0f, 0.0f, 0.0f);
 
         //Ground floor
         Entity groundEntity = sm.createEntity("GroundEntity", "mainPlatform.obj");
@@ -360,6 +384,11 @@ public class MyGame extends VariableFrameRateGame {
         groundMeshNode.scale(9f,9f,9f);
         groundNode.attachChild(groundMeshNode);
         groundNode.moveDown(.2f);
+
+        Entity ballEntity = sm.createEntity("Ball", "sphere.obj");
+        ballNode = sm.getRootSceneNode().createChildSceneNode("BallNode");
+        ballNode.attachObject(ballEntity);
+        ballNode.setLocalPosition(-2.0f, 1.0f, 0.0f);
 
         setupLighting();
 
@@ -374,7 +403,7 @@ public class MyGame extends VariableFrameRateGame {
         initPhysicsSystem();
         createPhysicsWorld();
         setupControls(sm);
-//        makeGroundFloor(eng,sm);
+//      makeGroundFloor(eng,sm);
     }
 
     private SkeletalEntity rigSkeleton(String name, String... actions) throws IOException {
@@ -657,21 +686,21 @@ public class MyGame extends VariableFrameRateGame {
         }
     }
 
-    private boolean isClose(SceneNode node1, SceneNode node2){
+    private boolean isClose(SceneNode node1, SceneNode node2, double minimum) {
+        return getDistance(node1, node2) <= minimum;
+    }
+
+    private double getDistance(SceneNode node1, SceneNode node2) {
         Vector3 a, b;
-        float distance, minimum;
-        float dx, dz;
+        double distance, dx, dz;
         a = node1.getLocalPosition();
         b = node2.getLocalPosition();
-        minimum = 1.0f;
-        minimum *= minimum;
         dx = a.x() - b.x();
         dz = a.z() - b.z();
         dx *= dx;
-        dz *= dx;
+        dz *= dz;
         distance = dx + dz;
-        distance *= distance;
-        return distance <= minimum;
+        return Math.sqrt(distance);
     }
 
     private void initPhysicsSystem() {
@@ -697,7 +726,17 @@ public class MyGame extends VariableFrameRateGame {
         ground.setBounciness(0.2f);
         ground.setFriction(.2f);
         groundNode.setPhysicsObject(ground);
-        double[] transform = groundNode.getPhysicsObject().getTransform();
+
+        temptf = toDoubleArray(ballNode.getLocalTransform().toFloatArray());
+        ball = physicsEngine.addSphereObject(
+                physicsEngine.nextUID(),
+                1.0f,
+                temptf,
+                1.0f
+        );
+        ball.setBounciness(1.0f);
+        ball.setFriction(.5f);
+        ballNode.setPhysicsObject(ball);
         /*
         temptf = toDoubleArray(sm.getRootSceneNode().getChild("BallNode").getLocalTransform().toFloatArray());
         ballObject = physicsEngine.addSphereObject(

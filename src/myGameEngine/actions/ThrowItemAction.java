@@ -56,7 +56,7 @@ public class ThrowItemAction extends AbstractInputAction {
                         .5f
                 );
                 physicsObject.setBounciness(0.8f);
-                physicsObject.setFriction(.1f);
+                physicsObject.setFriction(.5f);
                 hold.setPhysicsObject(physicsObject);
                 sc.removeNode(hold);
                 root.attachChild(hold);

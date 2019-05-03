@@ -6,14 +6,14 @@ import ray.rml.Vector3;
 
 public abstract class AbstractConstraintMoveAction extends AbstractInputAction {
     //Sphere Constraint (within)
-    float sphereRadiusConstraint = 15f;
+    private float sphereRadiusConstraint = 8f;
     //Box Constraint (within)
-    float xUpperConstraint = 20f;
-    float xLowerConstraint = -20f;
-    float yUpperConstraint = 15f;
-    float yLowerConstraint = 0f;
-    float zUpperConstraint = 20f;
-    float zLowerConstraint = -20f;
+    private float xUpperConstraint = 8f;
+    private float xLowerConstraint = -8f;
+    private float yUpperConstraint = 15f;
+    private float yLowerConstraint = 0f;
+    private float zUpperConstraint = 8f;
+    private float zLowerConstraint = -8f;
     
     //Checking if a node is within constraints
     protected boolean isLegal(Node node){
