@@ -163,6 +163,7 @@ public class MyGame extends VariableFrameRateGame {
         float elapsedTimeMillis = engine.getElapsedTimeMillis();
         im.update(elapsedTimeMillis);
         astronautSkeleton.update();
+        occ.updateCameraPosition();
         /*if(follow != null)
         {
             Vector3 pos = Vector3f.createFrom(
@@ -291,6 +292,8 @@ public class MyGame extends VariableFrameRateGame {
                         throwItemAction,
                         InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY
                 );
+                
+                occ.setupInput(im,c);
             }
         }
     }
@@ -306,7 +309,7 @@ public class MyGame extends VariableFrameRateGame {
         SceneNode p1CameraNode = rootNode.createChildSceneNode(camera.getName() + "Node");
         p1CameraNode.attachObject(camera);
         
-//        camera.setMode('c');
+        camera.setMode('n');
 //        camera.setRt((Vector3f) Vector3f.createFrom(1.0f, 0.0f, 0.0f));
 //        camera.setUp((Vector3f) Vector3f.createFrom(0.0f, 0.0f, 1.0f));
 //        camera.setFd((Vector3f) Vector3f.createFrom(0.0f, -1.0f, 0.0f));
@@ -376,7 +379,7 @@ public class MyGame extends VariableFrameRateGame {
         SkeletalEntity skeleton = sm.createSkeletalEntity(name, name.concat("Mesh.rkm"), name.concat("Skeleton.rks"));
         for(String action : actions)
             skeleton.loadAnimation(action, action.concat("Action.rka"));
-        skeleton.playAnimation("run",1.0f, SkeletalEntity.EndType.LOOP,0);
+        skeleton.playAnimation("idle",1.0f, SkeletalEntity.EndType.LOOP,0);
         skeleton.setMaterial(material);
         skeleton.setPrimitive(Primitive.TRIANGLES);
         bindAnim(skeleton);
