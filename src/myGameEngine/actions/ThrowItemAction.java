@@ -1,7 +1,10 @@
 package myGameEngine.actions;
 
+import myGameEngine.controller.SquishyBounceController;
 import net.java.games.input.Event;
 import ray.input.action.AbstractInputAction;
+import ray.physics.PhysicsEngine;
+import ray.physics.PhysicsObject;
 import ray.rage.rendersystem.Renderable;
 import ray.rage.scene.Entity;
 import ray.rage.scene.Node;
@@ -15,12 +18,16 @@ import java.util.Iterator;
 
 public class ThrowItemAction extends AbstractInputAction {
 
-    SceneNode thrower;
-    SceneManager sm;
+    private SceneNode thrower;
+    private SceneManager sm;
+    private PhysicsEngine pe;
+    private SquishyBounceController sc;
 
-    public ThrowItemAction(SceneNode thrower, SceneManager sm) {
+    public ThrowItemAction(SceneNode thrower, SceneManager sm, PhysicsEngine pe, SquishyBounceController sc) {
         this.thrower = thrower;
         this.sm = sm;
+        this.pe = pe;
+        this.sc = sc;
     }
 
     @Override
@@ -30,6 +37,9 @@ public class ThrowItemAction extends AbstractInputAction {
         Vector3 worldPosition, localScale;
         Matrix3 worldRotation;
         SceneNode hold;
+        double[] temptf;
+        float mass = .5f;
+        PhysicsObject physicsObject;
         while(children.hasNext()) {
             hold = (SceneNode) children.next();
             if(hold.getName().startsWith("Part"))
@@ -41,12 +51,32 @@ public class ThrowItemAction extends AbstractInputAction {
                 hold.setLocalPosition(worldPosition);
                 hold.setLocalRotation(worldRotation);
                 hold.setLocalScale(localScale);
+                temptf = toDoubleArray(hold.getLocalTransform().toFloatArray());
+                physicsObject = pe.addSphereObject(
+                        pe.nextUID(),
+                        mass,
+                        temptf,
+                        .5f
+                );
+                physicsObject.setBounciness(1.0f);
+                hold.setPhysicsObject(physicsObject);
+                sc.removeNode(hold);
+                root.attachChild(hold);
+                hold.getPhysicsObject().applyForce(
+                        thrower.getLocalForwardAxis().x() * 50,
+                        thrower.getLocalForwardAxis().y() * 50,
+                        thrower.getLocalForwardAxis().z() * 50,
+                        hold.getLocalPosition().x(),
+                        hold.getLocalPosition().y(),
+                        hold.getLocalPosition().z()
+                );
+                /*
                 try {
                     Entity e = sm.createEntity("Test", "cube.obj");
                     e.setPrimitive(Renderable.Primitive.TRIANGLES);
                     hold.attachObject(e);
                 }
-                catch (IOException e) { e.printStackTrace(); }
+                catch (IOException e) { e.printStackTrace(); }*/
 
             }
         }

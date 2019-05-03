@@ -75,6 +75,7 @@ public class MyGame extends VariableFrameRateGame {
 
     private boolean alone = true;
     private boolean holdingItem = false;
+    private boolean running = false;
 
     private SceneNode astronautNode, groundNode;
     private SkeletalEntity astronautSkeleton;
@@ -165,7 +166,7 @@ public class MyGame extends VariableFrameRateGame {
         float elapsedTimeMillis = engine.getElapsedTimeMillis();
         im.update(elapsedTimeMillis);
         astronautSkeleton.update();
-        if(follow != null)
+        /*if(follow != null)
         {
             Vector3 pos = Vector3f.createFrom(
                     follow.getWorldPosition().x(),
@@ -173,10 +174,42 @@ public class MyGame extends VariableFrameRateGame {
                     follow.getWorldPosition().z()
             );
             camera.setPo((Vector3f) pos);
-        }
+        }*/
         //Networking, process packets
+        //if(running) updatePhysics();
+        updatePhysics();
         pickupItems();
         processNetworking(elapsedTimeMillis);
+    }
+
+    private void updatePhysics() {
+        float time = eng.getElapsedTimeMillis();
+        Matrix4 mat;
+        physicsEngine.update(time);
+        for(SceneNode node : eng.getSceneManager().getSceneNodes()) {
+            if(node.getPhysicsObject() != null) {
+                mat = Matrix4f.createFrom(toFloatArray(node.getPhysicsObject().getTransform()));
+                node.setLocalPosition(mat.value(0, 3), mat.value(1, 3), mat.value(2, 3));
+            }
+        }
+    }
+
+    private void pickupItems() {
+        if (holdingItem) return;
+        SceneNode hold = null;
+        for(SceneNode node : partsList){
+            if(isClose(node, astronautNode)) {
+                holdingItem = true;
+                node.getParent().detachChild(node);
+                astronautNode.attachChild(node);
+                node.setLocalRotation(astronautNode.getLocalRotation());
+                node.setLocalPosition(0.0f, 3.0f, 0.0f);
+                hold = node;
+                follow = node;
+                break;
+            }
+        }
+        if(hold != null) partsList.remove(hold);
     }
 
     protected void processNetworking(float elapsTime) { // Process packets received by the client from the server
@@ -218,7 +251,7 @@ public class MyGame extends VariableFrameRateGame {
         MoveDownAction moveDownAction = new MoveDownAction      (this, astronautNode, protClient);
         MoveRightAction moveRightAction = new MoveRightAction   (this, astronautNode, protClient);
         MoveLeftAction moveLeftAction = new MoveLeftAction      (this, astronautNode,protClient);
-        ThrowItemAction throwItemAction = new ThrowItemAction   (astronautNode, sm);
+        ThrowItemAction throwItemAction = new ThrowItemAction   (astronautNode, sm, physicsEngine, sc);
 
         for (Controller c : controllers) {
             if (c.getType() == Controller.Type.KEYBOARD) {
@@ -270,7 +303,7 @@ public class MyGame extends VariableFrameRateGame {
         camera.setRt((Vector3f) Vector3f.createFrom(1.0f, 0.0f, 0.0f));
         camera.setUp((Vector3f) Vector3f.createFrom(0.0f, 0.0f, 1.0f));
         camera.setFd((Vector3f) Vector3f.createFrom(0.0f, -1.0f, 0.0f));
-        camera.setPo((Vector3f) Vector3f.createFrom(0.0f, 3.0f, 0.0f));
+        camera.setPo((Vector3f) Vector3f.createFrom(0.0f, 5.0f, 0.0f));
     }
 
     protected void initControllers(SceneManager sm) {
@@ -302,6 +335,12 @@ public class MyGame extends VariableFrameRateGame {
 
         //Scene axis
         showAxis(eng, sm);
+/*
+        Entity ball = sm.createEntity("Ball", "sphere.obj");
+        ball.setPrimitive(Primitive.TRIANGLES);
+        SceneNode ballNode = sm.getRootSceneNode().createChildSceneNode("BallNode");
+        ballNode.attachObject(ball);
+        ballNode.setLocalPosition(0.0f, 2.0f, 0.0f);*/
 
         //Ground floor
         Entity groundEntity = sm.createEntity("GroundEntity", "platform1.obj");
@@ -319,10 +358,10 @@ public class MyGame extends VariableFrameRateGame {
         sm.addController(sc);
 
         makeParts();
-        setupControls(sm);
 
         initPhysicsSystem();
         createPhysicsWorld();
+        setupControls(sm);
     }
 
     private SkeletalEntity rigSkeleton(String name, String... actions) throws IOException {
@@ -579,24 +618,7 @@ public class MyGame extends VariableFrameRateGame {
         }
     }
 
-    private void pickupItems() {
-        if (holdingItem) return;
-        SceneNode hold = null;
-        for(SceneNode node : partsList){
-            if(close(node, astronautNode)) {
-                holdingItem = true;
-                astronautNode.attachChild(node);
-                node.setLocalRotation(astronautNode.getLocalRotation());
-                node.setLocalPosition(0.0f, 3.0f, 0.0f);
-                hold = node;
-                follow = node;
-                break;
-            }
-        }
-        if(hold != null) partsList.remove(hold);
-    }
-
-    private boolean close(SceneNode node1, SceneNode node2){
+    private boolean isClose(SceneNode node1, SceneNode node2){
         Vector3 a, b;
         float distance, minimum;
         float dx, dz;
@@ -625,6 +647,7 @@ public class MyGame extends VariableFrameRateGame {
     private void createPhysicsWorld() {
         float[] up = { 0.0f, 1.0f, 0.0f };
         double[] temptf;
+        PhysicsObject ballObject;
 
         temptf = toDoubleArray(groundNode.getLocalTransform().toFloatArray());
         ground = physicsEngine.addStaticPlaneObject(
@@ -635,12 +658,29 @@ public class MyGame extends VariableFrameRateGame {
         ground.setBounciness(1.0f);
         groundNode.scale(10.0f, .5f, 10.0f);
         groundNode.setPhysicsObject(ground);
+        /*
+        temptf = toDoubleArray(sm.getRootSceneNode().getChild("BallNode").getLocalTransform().toFloatArray());
+        ballObject = physicsEngine.addSphereObject(
+                physicsEngine.nextUID(),
+                1.0f,
+                temptf,
+                0.1f
+        );
+        ballObject.setBounciness(1.0f);
+        sm.getRootSceneNode().getChild("BallNode").setPhysicsObject(ballObject);*/
     }
 
     private double[] toDoubleArray(float[] in) {
         int size = in.length;
         double[] ret = new double[size];
         for(int i = 0; i < size; ++i) ret[i] = (double) in[i];
+        return ret;
+    }
+
+    private float[] toFloatArray(double[] in) {
+        int size = in.length;
+        float[] ret = new float[size];
+        for(int i = 0; i < size; ++i) ret[i] = (float) in[i];
         return ret;
     }
 
