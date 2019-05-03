@@ -4,7 +4,6 @@ import a3.MyGame;
 import myGameEngine.Networking.ProtocolClient;
 import net.java.games.input.Event;
 import ray.rage.scene.Node;
-import ray.rage.scene.SceneNode;
 import ray.rml.Vector3;
 
 public class MoveRightAction extends AbstractConstraintMoveAction {
@@ -25,7 +24,7 @@ public class MoveRightAction extends AbstractConstraintMoveAction {
         if(event.getValue() > .2f || event.getValue() < -.2f) {
             float value = event.getValue() * 0.05f*updates;
             Vector3 pos = nodeToMove.getLocalPosition();
-            nodeToMove.setLocalPosition(pos.x() + value, pos.y(), pos.z());
+            nodeToMove.setLocalPosition(pos.x() - value, pos.y(), pos.z());
             nodeToMove.setLocalRotation(myGame.RIGHT);
             //Check boundaries
             if(!isLegal(nodeToMove)){

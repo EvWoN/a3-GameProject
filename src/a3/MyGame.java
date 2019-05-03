@@ -90,20 +90,20 @@ public class MyGame extends VariableFrameRateGame {
     public Matrix3 LEFT = Matrix3f.createFrom(
             Vector3f.createFrom(0.0f, 0.0f, -1.0f),
             Vector3f.createFrom(0.0f, 1.0f, 0.0f),
-            Vector3f.createFrom(-1.0f, 0.0f, 0.0f)
+            Vector3f.createFrom(1.0f, 0.0f, 0.0f)
     );
     public Matrix3 RIGHT = Matrix3f.createFrom(
             Vector3f.createFrom(0.0f, 0.0f, 1.0f),
             Vector3f.createFrom(0.0f, 1.0f, 0.0f),
-            Vector3f.createFrom(1.0f, 0.0f, 0.0f)
+            Vector3f.createFrom(-1.0f, 0.0f, 0.0f)
     );
     public Matrix3 UP = Matrix3f.createFrom(
-            Vector3f.createFrom(-1.0f, 0.0f, 0.0f),
+            Vector3f.createFrom(1.0f, 0.0f, 0.0f),
             Vector3f.createFrom(0.0f, 1.0f, 0.0f),
             Vector3f.createFrom(0.0f, 0.0f, 1.0f)
     );
     public Matrix3 DOWN = Matrix3f.createFrom(
-            Vector3f.createFrom(1.0f, 0.0f, 0.0f),
+            Vector3f.createFrom(-1.0f, 0.0f, 0.0f),
             Vector3f.createFrom(0.0f, 1.0f, 0.0f),
             Vector3f.createFrom(0.0f, 0.0f, -1.0f)
     );
@@ -162,8 +162,8 @@ public class MyGame extends VariableFrameRateGame {
         int height = rs.getCanvas().getHeight();
         float elapsedTimeMillis = engine.getElapsedTimeMillis();
         im.update(elapsedTimeMillis);
-        astronautSkeleton.update();
         occ.updateCameraPosition();
+        astronautSkeleton.update();
         /*if(follow != null)
         {
             Vector3 pos = Vector3f.createFrom(
@@ -310,10 +310,10 @@ public class MyGame extends VariableFrameRateGame {
         p1CameraNode.attachObject(camera);
         
         camera.setMode('n');
-//        camera.setRt((Vector3f) Vector3f.createFrom(1.0f, 0.0f, 0.0f));
-//        camera.setUp((Vector3f) Vector3f.createFrom(0.0f, 0.0f, 1.0f));
-//        camera.setFd((Vector3f) Vector3f.createFrom(0.0f, -1.0f, 0.0f));
-//        camera.setPo((Vector3f) Vector3f.createFrom(0.0f, 5.0f, 0.0f));
+        camera.setRt((Vector3f) Vector3f.createFrom(1.0f, 0.0f, 0.0f));
+        camera.setUp((Vector3f) Vector3f.createFrom(0.0f, 0.0f, 1.0f));
+        camera.setFd((Vector3f) Vector3f.createFrom(0.0f, -1.0f, 0.0f));
+        camera.setPo((Vector3f) Vector3f.createFrom(0.0f, 5.0f, 0.0f));
     }
 
     protected void initControllers(SceneManager sm) {
@@ -356,7 +356,7 @@ public class MyGame extends VariableFrameRateGame {
         Entity groundEntity = sm.createEntity("GroundEntity", "platform1.obj");
         groundNode = sm.getRootSceneNode().createChildSceneNode("GroundNode");
         groundNode.attachObject(groundEntity);
-        groundNode.setLocalPosition(0.0f, -0.5f, 0.0f);
+        groundNode.setLocalPosition(0.0f, -1.0f, 0.0f);
 
         setupLighting();
 
@@ -666,7 +666,7 @@ public class MyGame extends VariableFrameRateGame {
                 up,
                 0.0f);
         ground.setBounciness(1.0f);
-        groundNode.scale(10.0f, .5f, 10.0f);
+//        groundNode.scale(10.0f, .5f, 10.0f);
         groundNode.setPhysicsObject(ground);
         /*
         temptf = toDoubleArray(sm.getRootSceneNode().getChild("BallNode").getLocalTransform().toFloatArray());
