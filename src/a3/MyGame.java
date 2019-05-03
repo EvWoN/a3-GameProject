@@ -37,12 +37,8 @@ import ray.rage.util.Configuration;
 import ray.rml.*;
 
 import javax.script.ScriptEngine;
-import javax.script.ScriptEngineFactory;
-import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
-import javax.vecmath.AxisAngle4f;
 import java.awt.*;
-import java.awt.event.KeyEvent;
 import java.awt.geom.AffineTransform;
 import java.io.FileReader;
 import java.io.IOException;
@@ -70,6 +66,7 @@ public class MyGame extends VariableFrameRateGame {
     //Controllers
     private RotationController rc;
     private SquishyBounceController sc;
+    private OrbitCameraController occ;
 
     private float elapsTime = 0.0f;
 
@@ -245,13 +242,22 @@ public class MyGame extends VariableFrameRateGame {
         System.out.println("SetupControls");
         //im = new GenericInputManager();
         ArrayList<Controller> controllers = im.getControllers();
-
+        
+        //CameraOrbitalController
+        SceneNode cameraNode = sm.getSceneNode("CameraNode");
+        SceneNode astronautNode = sm.getSceneNode("astronautNode");
+        Camera camera = sm.getCamera("Camera");
+        occ = new OrbitCameraController(camera,cameraNode,astronautNode);
+    
         //Actions
+        //Movement
         MoveUpAction moveUpAction = new MoveUpAction            (this, astronautNode, protClient);
         MoveDownAction moveDownAction = new MoveDownAction      (this, astronautNode, protClient);
         MoveRightAction moveRightAction = new MoveRightAction   (this, astronautNode, protClient);
         MoveLeftAction moveLeftAction = new MoveLeftAction      (this, astronautNode,protClient);
         ThrowItemAction throwItemAction = new ThrowItemAction   (astronautNode, sm, physicsEngine, sc);
+        //CameraRotate
+//        RotateLeftAction rotateLeftAction = new RotateLeftAction();
 
         for (Controller c : controllers) {
             if (c.getType() == Controller.Type.KEYBOARD) {
@@ -299,11 +305,12 @@ public class MyGame extends VariableFrameRateGame {
         rw.getViewport(0).setCamera(camera);
         SceneNode p1CameraNode = rootNode.createChildSceneNode(camera.getName() + "Node");
         p1CameraNode.attachObject(camera);
-        camera.setMode('c');
-        camera.setRt((Vector3f) Vector3f.createFrom(1.0f, 0.0f, 0.0f));
-        camera.setUp((Vector3f) Vector3f.createFrom(0.0f, 0.0f, 1.0f));
-        camera.setFd((Vector3f) Vector3f.createFrom(0.0f, -1.0f, 0.0f));
-        camera.setPo((Vector3f) Vector3f.createFrom(0.0f, 5.0f, 0.0f));
+        
+//        camera.setMode('c');
+//        camera.setRt((Vector3f) Vector3f.createFrom(1.0f, 0.0f, 0.0f));
+//        camera.setUp((Vector3f) Vector3f.createFrom(0.0f, 0.0f, 1.0f));
+//        camera.setFd((Vector3f) Vector3f.createFrom(0.0f, -1.0f, 0.0f));
+//        camera.setPo((Vector3f) Vector3f.createFrom(0.0f, 5.0f, 0.0f));
     }
 
     protected void initControllers(SceneManager sm) {
@@ -369,7 +376,7 @@ public class MyGame extends VariableFrameRateGame {
         SkeletalEntity skeleton = sm.createSkeletalEntity(name, name.concat("Mesh.rkm"), name.concat("Skeleton.rks"));
         for(String action : actions)
             skeleton.loadAnimation(action, action.concat("Action.rka"));
-        skeleton.playAnimation("idle",1.0f, SkeletalEntity.EndType.LOOP,0);
+        skeleton.playAnimation("run",1.0f, SkeletalEntity.EndType.LOOP,0);
         skeleton.setMaterial(material);
         skeleton.setPrimitive(Primitive.TRIANGLES);
         bindAnim(skeleton);
