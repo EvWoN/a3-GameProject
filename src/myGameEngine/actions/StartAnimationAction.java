@@ -1,14 +1,9 @@
 package myGameEngine.actions;
 
-import a3.MyGame;
-import myGameEngine.Networking.ProtocolClient;
 import net.java.games.input.Event;
-import ray.rage.scene.Node;
-import ray.rage.scene.SceneNode;
 import ray.rage.scene.SkeletalEntity;
-import ray.rml.Vector3;
 
-public class StartAnimationAction extends AbstractConstraintMoveAction {
+public class StartAnimationAction extends ConstraintTransformAction {
 
     private SkeletalEntity skeleton;
     private String name;

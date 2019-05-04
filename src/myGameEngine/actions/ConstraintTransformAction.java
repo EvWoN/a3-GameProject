@@ -4,7 +4,7 @@ import ray.input.action.AbstractInputAction;
 import ray.rage.scene.Node;
 import ray.rml.Vector3;
 
-public abstract class AbstractConstraintMoveAction extends AbstractInputAction {
+public abstract class ConstraintTransformAction extends AbstractInputAction {
     //Sphere Constraint (within)
     private float sphereRadiusConstraint = 8f;
     //Box Constraint (within)

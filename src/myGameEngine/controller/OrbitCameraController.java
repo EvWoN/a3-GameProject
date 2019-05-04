@@ -38,6 +38,7 @@ public class OrbitCameraController {
     // relative to the target in spherical coordinates, then convertsthose
     // to world Cartesian coordinates and setting the camera position
     public void updateCameraPosition() {
+    
         double theta = Math.toRadians(cameraAzimuth);// rot around target
         double phi = Math.toRadians(cameraElevation);// altitude angle
         double x = radius * Math.cos(phi) * Math.sin(theta);
@@ -115,8 +116,6 @@ public class OrbitCameraController {
         }
     }
     
-    
-    
     private class OrbitAroundAction extends AbstractInputAction {
         //Moves the camera around the target (changes camera azimuth).
         public void performAction(float time, net.java.games.input.Event evt) {
@@ -185,5 +184,9 @@ public class OrbitCameraController {
             } else cameraElevation = newElev;
             updateCameraPosition();
         }
+    }
+    
+    public float getCameraAzimuth() {
+        return (cameraAzimuth+180)%380;
     }
 }

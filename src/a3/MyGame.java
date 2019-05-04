@@ -269,10 +269,10 @@ public class MyGame extends VariableFrameRateGame {
     
         //Actions
         //Movement
-        MoveUpAction moveUpAction = new MoveUpAction            (this, astronautNode, protClient);
-        MoveDownAction moveDownAction = new MoveDownAction      (this, astronautNode, protClient);
-        MoveRightAction moveRightAction = new MoveRightAction   (this, astronautNode, protClient);
-        MoveLeftAction moveLeftAction = new MoveLeftAction      (this, astronautNode,protClient);
+        MoveForwardAction moveForwardAction = new MoveForwardAction(this, astronautNode, occ, protClient);
+        MoveBackwardAction moveBackwardAction = new MoveBackwardAction(this, astronautNode, occ, protClient);
+        MoveRightAction moveRightAction = new MoveRightAction   (this, astronautNode, occ, protClient);
+        MoveLeftAction moveLeftAction = new MoveLeftAction      (this, astronautNode, occ, protClient);
         ThrowItemAction throwItemAction = new ThrowItemAction   (astronautNode, sm, physicsEngine, sc);
         //CameraRotate
 //        RotateLeftAction rotateLeftAction = new RotateLeftAction();
@@ -282,13 +282,13 @@ public class MyGame extends VariableFrameRateGame {
                 im.associateAction(
                         c,
                         Component.Identifier.Key.W,
-                        moveUpAction,
+                        moveForwardAction,
                         InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
                 );
                 im.associateAction(
                         c,
                         Component.Identifier.Key.S,
-                        moveDownAction,
+                        moveBackwardAction,
                         InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
                 );
                 im.associateAction(

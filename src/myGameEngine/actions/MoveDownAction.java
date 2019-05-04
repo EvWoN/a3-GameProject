@@ -4,10 +4,9 @@ import a3.MyGame;
 import myGameEngine.Networking.ProtocolClient;
 import net.java.games.input.Event;
 import ray.rage.scene.Node;
-import ray.rage.scene.SceneNode;
 import ray.rml.Vector3;
 
-public class MoveDownAction extends AbstractConstraintMoveAction {
+public class MoveDownAction extends ConstraintTransformAction {
 
     private MyGame myGame;
     private Node nodeToMove;
