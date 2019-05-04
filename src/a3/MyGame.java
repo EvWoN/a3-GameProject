@@ -265,7 +265,7 @@ public class MyGame extends VariableFrameRateGame {
         //CameraOrbitalController
         SceneNode cameraNode = sm.getSceneNode("CameraNode");
         Camera camera = sm.getCamera("Camera");
-        occ = new OrbitCameraController(camera,cameraNode,groundNode);
+        occ = new OrbitCameraController(camera,cameraNode,groundNode,astronautNode);
     
         //Actions
         //Movement

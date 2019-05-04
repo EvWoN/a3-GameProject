@@ -11,41 +11,65 @@ import ray.rage.scene.Node;
 import ray.rml.Vector3;
 import ray.rml.Vector3f;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 public class OrbitCameraController {
     private Camera camera;//the camera being controlled
     private Node cameraN;//the node the camera is attached to
-    private Node target;//the target the camera looks at
+    private List<Node> targets;//the targets the camera looks at
+    private Vector3 cameraFocus;
     private float cameraAzimuth;//rotation of camera around Y axis
-    private float cameraElevation;//elevation of camera above target
+    private float cameraElevation;//elevation of camera above targets
     private float minElev = 5f, maxElev = 80f;//Elevation constraints in deg
-    private float radius;//distance between camera and target
+    private float radius;//distance between camera and targets
     private float minRad = 10f, maxRad = 17f;//radius constraints
-    private Vector3 targetPos;//target’s position in the world
+    private Vector3 targetPos;//targets’s position in the world
     private Vector3 worldUpVec;
     
-    public OrbitCameraController(Camera cam, Node camN, Node targ) {
+    public OrbitCameraController(Camera cam, Node camN, List targs) {
+        System.out.println(targs);
         camera = cam;
         cameraN = camN;
-        target = targ;
-        cameraAzimuth = 180.0f;// start from BEHIND and ABOVE the target
+        targets = targs;
+        cameraAzimuth = 180.0f;// start from BEHIND and ABOVE the targets
         cameraElevation = 20.0f;// elevation is in degrees
         radius = 12.0f;
         worldUpVec = Vector3f.createFrom(0.0f, 1.0f, 0.0f);
         updateCameraPosition();
     }
+
+    public OrbitCameraController(Camera cam, Node camN, Node... targs) {
+        this(cam, camN, Arrays.asList(targs));
+    }
+
+    public OrbitCameraController(Camera cam, Node camN, Node targs) {
+        this(cam, camN, Collections.singletonList(targs));
+    }
     
     // Updates camera position: computes azimuth, elevation, and distance
-    // relative to the target in spherical coordinates, then convertsthose
+    // relative to the targets in spherical coordinates, then convertsthose
     // to world Cartesian coordinates and setting the camera position
     public void updateCameraPosition() {
-    
-        double theta = Math.toRadians(cameraAzimuth);// rot around target
+        updateFocusLocation();
+        double theta = Math.toRadians(cameraAzimuth);// rot around targets
         double phi = Math.toRadians(cameraElevation);// altitude angle
         double x = radius * Math.cos(phi) * Math.sin(theta);
         double y = radius * Math.sin(phi);
         double z = radius * Math.cos(phi) * Math.cos(theta);
-        cameraN.setLocalPosition(Vector3f.createFrom((float) x, (float) y, (float) z).add(target.getWorldPosition()));
-        cameraN.lookAt(target, worldUpVec);
+//        System.out.println("Camera focus: " + cameraFocus); //Debug
+        cameraN.setLocalPosition(Vector3f.createFrom((float) x, (float) y, (float) z).add(cameraFocus));
+        cameraN.lookAt(cameraFocus, worldUpVec);
+    }
+
+    private void updateFocusLocation(){
+        cameraFocus = Vector3f.createFrom(0,0,0);
+            for (Node target : targets) {
+//                System.out.println("\tNode: " + target); //Debug
+                cameraFocus = cameraFocus.add(target.getWorldPosition());
+            }
+            cameraFocus = cameraFocus.div(targets.size());
     }
     
     public void setupInput(InputManager im, Controller controller) {
@@ -117,7 +141,7 @@ public class OrbitCameraController {
     }
     
     private class OrbitAroundAction extends AbstractInputAction {
-        //Moves the camera around the target (changes camera azimuth).
+        //Moves the camera around the targets (changes camera azimuth).
         public void performAction(float time, net.java.games.input.Event evt) {
             float rotAmount;
             float strength = evt.getValue()*2;
@@ -137,7 +161,7 @@ public class OrbitCameraController {
     }
     
     private class OrbitRadiusAction extends AbstractInputAction {
-        //Moves the camera in and out of the target (ZOOM)
+        //Moves the camera in and out of the targets (ZOOM)
         public void performAction(float time, net.java.games.input.Event evt) {
             float moveInAmount;
             float strength = evt.getValue();
@@ -162,7 +186,7 @@ public class OrbitCameraController {
     }
     
     private class OrbitElevationAction extends AbstractInputAction {
-        //Moves the camera up and down around the target
+        //Moves the camera up and down around the targets
         public void performAction(float time, net.java.games.input.Event evt) {
             float moveUpAmount;
             float strength = evt.getValue()*2;
