@@ -1,9 +1,8 @@
 package a3;
 
+import javafx.beans.property.SimpleBooleanProperty;
 import myGameEngine.Managers.Animator;
 import myGameEngine.Managers.Movement2DManager;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.value.ObservableBooleanValue;
 import myGameEngine.Networking.GhostAvatar;
 import myGameEngine.Networking.ProtocolClient;
 import myGameEngine.actions.*;
