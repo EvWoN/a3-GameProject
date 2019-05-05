@@ -1,5 +1,6 @@
 package a3;
 
+import myGameEngine.Managers.Animator;
 import myGameEngine.Managers.Movement2DManager;
 import myGameEngine.Networking.GhostAvatar;
 import myGameEngine.Networking.ProtocolClient;
@@ -58,6 +59,7 @@ public class MyGame extends VariableFrameRateGame {
     private InputManager im;
     private SceneManager sm;
     private Movement2DManager mm;
+    private Animator animator;
     private String serverAddress;
     private int serverPort;
     private IGameConnection.ProtocolType serverProtocol;
@@ -176,6 +178,7 @@ public class MyGame extends VariableFrameRateGame {
         );
         //Networking, process packet
         processNetworking(elapsedTimeMillis);
+        animator.updateAnimationState(elapsedTimeMillis);
         mm.updateMovements();
     }
 
@@ -261,9 +264,11 @@ public class MyGame extends VariableFrameRateGame {
     }
 
     private void setupControls(SceneManager sm) {
-        mm = new Movement2DManager(8f);
         System.out.println("SetupControls");
-        //im = new GenericInputManager();
+        mm = new Movement2DManager(8f);
+        animator = new Animator(astronautSkeleton,mm,"run",.8f,"idle",.4f);
+        
+        im = new GenericInputManager();
         ArrayList<Controller> controllers = im.getControllers();
         
         //CameraOrbitalController
@@ -417,31 +422,7 @@ public class MyGame extends VariableFrameRateGame {
             skeleton.loadAnimation(action, action.concat("Action.rka"));
         skeleton.playAnimation("idle",0.4f, SkeletalEntity.EndType.LOOP,0);
         skeleton.setMaterial(material);
-        skeleton.setPrimitive(Primitive.TRIANGLES);
-        bindAnim(skeleton);
         return skeleton;
-    }
-
-    private void bindAnim (SkeletalEntity skeleton) {
-        im = new GenericInputManager();
-        ArrayList<Controller> controllers = im.getControllers();
-
-        StartAnimationAction startAnimationAction = new StartAnimationAction(
-                skeleton,
-                "run",
-                1.0f,
-                SkeletalEntity.EndType.LOOP,
-                0);
-
-        for(Controller c : controllers) {
-            if (c.getType() == Controller.Type.KEYBOARD)
-                im.associateAction(
-                        c,
-                        Component.Identifier.Key.Q,
-                        startAnimationAction,
-                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
-                );
-        }
     }
 
     private void setupLighting() {

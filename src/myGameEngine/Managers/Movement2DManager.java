@@ -12,6 +12,7 @@ import java.util.function.BiConsumer;
 public class Movement2DManager {
 
     private Hashtable<Node, List<MovementEvent>> nodeMovementQueueTable = new Hashtable<>();
+    private Hashtable<Node, Vector3> nodeDistanceMovedTable = new Hashtable<>();
     private float radiusConstraint;
 
     public Movement2DManager(float radiusConstraint){
@@ -39,6 +40,7 @@ public class Movement2DManager {
     }
 
     public void updateMovements(){
+        nodeDistanceMovedTable.clear();
         nodeMovementQueueTable.forEach(new BiConsumer<Node, List<MovementEvent>>() {
             @Override
             public void accept(Node node, List<MovementEvent> movementEvents) {
@@ -52,18 +54,29 @@ public class Movement2DManager {
                     xTotal = xTotal + (movement.getDistValue() * Math.sin(theta));
                     zTotal = zTotal + (movement.getDistValue() * Math.cos(theta));
                 }
-                Vector3 newPosition = Vector3f.createFrom((float) xTotal, (float) y, (float) zTotal).add(node.getWorldPosition());
+                Vector3 distance = Vector3f.createFrom((float) xTotal, (float) y, (float) zTotal);
+                Vector3 newPosition = distance.add(node.getLocalPosition());
     
+                nodeDistanceMovedTable.put(node,distance);
                 //Checking if within bound && we did infact move
-                if(newPosition.length() <= radiusConstraint && !newPosition.equals(node.getWorldPosition())) {
-                    node.lookAt(newPosition);
+                if(newPosition.length() <= radiusConstraint && !newPosition.equals(node.getLocalPosition())) {
+                    try {
+                        node.lookAt(newPosition);
+                    } catch (Exception e) {
+                        System.out.println("NewPosition:\t" + newPosition);
+                        System.out.println("WorldPosition:\t" + node.getWorldPosition());
+                    }
                     node.setLocalPosition(newPosition);
                 }
             }
         });
         nodeMovementQueueTable.clear();
     }
-
+    
+    public Hashtable<Node, Vector3> getNodeDistanceMovedTable() {
+        return nodeDistanceMovedTable;
+    }
+    
     private class MovementEvent {
         float directionAngle;
         float distValue;
@@ -81,4 +94,5 @@ public class Movement2DManager {
             return distValue;
         }
     }
+    
 }
