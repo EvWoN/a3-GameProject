@@ -1,5 +1,6 @@
 package a3;
 
+import myGameEngine.Managers.Movement2DManager;
 import myGameEngine.Networking.GhostAvatar;
 import myGameEngine.Networking.ProtocolClient;
 import myGameEngine.actions.*;
@@ -56,6 +57,7 @@ public class MyGame extends VariableFrameRateGame {
     private GL4RenderSystem rs;
     private InputManager im;
     private SceneManager sm;
+    private Movement2DManager mm;
     private String serverAddress;
     private int serverPort;
     private IGameConnection.ProtocolType serverProtocol;
@@ -174,6 +176,7 @@ public class MyGame extends VariableFrameRateGame {
         );
         //Networking, process packet
         processNetworking(elapsedTimeMillis);
+        mm.updateMovements();
     }
 
     private void updatePhysics() {
@@ -258,6 +261,7 @@ public class MyGame extends VariableFrameRateGame {
     }
 
     private void setupControls(SceneManager sm) {
+        mm = new Movement2DManager(8f);
         System.out.println("SetupControls");
         //im = new GenericInputManager();
         ArrayList<Controller> controllers = im.getControllers();
@@ -269,10 +273,10 @@ public class MyGame extends VariableFrameRateGame {
     
         //Actions
         //Movement
-        MoveForwardAction moveForwardAction = new MoveForwardAction(this, astronautNode, occ, protClient);
-        MoveBackwardAction moveBackwardAction = new MoveBackwardAction(this, astronautNode, occ, protClient);
-        MoveRightAction moveRightAction = new MoveRightAction   (this, astronautNode, occ, protClient);
-        MoveLeftAction moveLeftAction = new MoveLeftAction      (this, astronautNode, occ, protClient);
+        MoveForwardAction moveForwardAction = new MoveForwardAction(astronautNode, occ, mm);
+        MoveBackwardAction moveBackwardAction = new MoveBackwardAction(astronautNode, occ, mm);
+        MoveRightAction moveRightAction = new MoveRightAction   (astronautNode, occ, mm);
+        MoveLeftAction moveLeftAction = new MoveLeftAction      ( astronautNode, occ, mm);
         ThrowItemAction throwItemAction = new ThrowItemAction   (astronautNode, sm, physicsEngine, sc);
         //CameraRotate
 //        RotateLeftAction rotateLeftAction = new RotateLeftAction();

@@ -1,23 +1,21 @@
 package myGameEngine.actions;
 
-import a3.MyGame;
-import myGameEngine.Networking.ProtocolClient;
+import myGameEngine.Managers.Movement2DManager;
 import myGameEngine.controller.OrbitCameraController;
 import net.java.games.input.Event;
+import ray.input.action.AbstractInputAction;
 import ray.rage.scene.Node;
 
-public class MoveForwardAction extends MoveAction2D {
-
-    private MyGame myGame;
+public class MoveForwardAction extends AbstractInputAction {
+    
     private Node nodeToMove;
-    ProtocolClient protoClient;
     OrbitCameraController occ;
+    Movement2DManager mm;
 
-    public MoveForwardAction(MyGame game, Node c, OrbitCameraController occ, ProtocolClient protocolClient) {
-        myGame = game;
+    public MoveForwardAction(Node c, OrbitCameraController occ, Movement2DManager mm) {
         nodeToMove = c;
-        protoClient = protocolClient;
         this.occ = occ;
+        this.mm = mm;
     }
 
     @Override
@@ -25,10 +23,8 @@ public class MoveForwardAction extends MoveAction2D {
         float updates = (v/16f);
         if(event.getValue() > .2f || event.getValue() < -.2f) {
             float value = event.getValue() * 0.05f*updates;
-        
-            move(nodeToMove,occ.getCameraAzimuth(),0,value);
-        
-            protoClient.sendMoveMessage(nodeToMove.getWorldPosition(),nodeToMove.getWorldForwardAxis());
+            float direction = occ.getCameraAzimuth() + 0; //Forward
+            mm.queueMovementEvent(nodeToMove,direction,value);
         }
     }
 }
