@@ -1,5 +1,7 @@
 package a3;
 
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.value.ObservableBooleanValue;
 import myGameEngine.Networking.GhostAvatar;
 import myGameEngine.Networking.ProtocolClient;
 import myGameEngine.actions.*;
@@ -69,8 +71,9 @@ public class MyGame extends VariableFrameRateGame {
     private OrbitCameraController occ;
 
     private boolean alone = true;
-    private boolean holdingItem = false;
     private boolean placed = false;
+
+    private SimpleBooleanProperty holdingItem = new SimpleBooleanProperty(false);
 
     private SceneNode astronautNode, groundNode, ufoNode1, ufoNode2, ballNode;
     private SkeletalEntity astronautSkeleton;
@@ -176,7 +179,7 @@ public class MyGame extends VariableFrameRateGame {
         pickupItems();
         checkItems();
         moveEnemies();
-        if (Math.round(totalTime / 1000) % 5 == 0)
+        if (Math.round(totalTime / 1000) % 8 == 0)
         {
             if(!placed) {
                 try {
@@ -197,13 +200,11 @@ public class MyGame extends VariableFrameRateGame {
             hold = null;
         }
         rs.setHUD(
-                "Seconds: " + Math.round(totalTime / 1000) +
+                "Seconds: " + Math.round(totalTime / 1000) + " " +
                 astronautNode.getLocalPosition().x() + ", " +
                 astronautNode.getLocalPosition().y() + ", " +
                 astronautNode.getLocalPosition().z() + ", " +
-                        ((hold != null) ?
-                        getDistance(groundNode, (SceneNode) hold) :
-                        "N/A")
+                "Holding: " + holdingItem
         );
         //Networking, process packet
         processNetworking(elapsedTimeMillis);
@@ -222,11 +223,11 @@ public class MyGame extends VariableFrameRateGame {
     }
 
     private void pickupItems() {
-        if (holdingItem) return;
+        if (holdingItem.getValue()) return;
         SceneNode hold = null;
         for(SceneNode node : partsList){
             if(isClose(node, astronautNode, 1.0f)) {
-                holdingItem = true;
+                holdingItem.set(true);
                 node.getParent().detachChild(node);
                 astronautNode.attachChild(node);
                 node.setLocalRotation(astronautNode.getLocalRotation());
@@ -241,15 +242,20 @@ public class MyGame extends VariableFrameRateGame {
 
     private void checkItems() {
         Iterator<Node> nodeIterator = sm.getRootSceneNode().getChildNodes().iterator();
+        ArrayList<Node> toBeRemoved = new ArrayList<>();
         Node node;
         while(nodeIterator.hasNext())
         {
             node = nodeIterator.next();
-            if(node.getPhysicsObject() != null && !node.getName().startsWith("Ground")) {
-                if(!isClose((SceneNode) node, groundNode, 8.0f)) {
-                    sm.getRootSceneNode().detachChild(node);
-                }
-            }
+            if(node.getPhysicsObject() != null && !node.getName().startsWith("Ground"))
+                if(!isClose((SceneNode) node, groundNode, 8.0f)) toBeRemoved.add(node);
+        }
+
+        nodeIterator = toBeRemoved.iterator();
+        while(nodeIterator.hasNext()) {
+            node = nodeIterator.next();
+            partsList.remove(node);
+            sm.getRootSceneNode().detachChild(node);
         }
     }
 
@@ -306,7 +312,7 @@ public class MyGame extends VariableFrameRateGame {
         MoveBackwardAction moveBackwardAction = new MoveBackwardAction(this, astronautNode, occ, protClient);
         MoveRightAction moveRightAction = new MoveRightAction   (this, astronautNode, occ, protClient);
         MoveLeftAction moveLeftAction = new MoveLeftAction      (this, astronautNode, occ, protClient);
-        ThrowItemAction throwItemAction = new ThrowItemAction   (astronautNode, sm, physicsEngine, sc);
+        ThrowItemAction throwItemAction = new ThrowItemAction   (astronautNode, holdingItem, sm, physicsEngine, sc);
         //CameraRotate
 //        RotateLeftAction rotateLeftAction = new RotateLeftAction();
 
@@ -704,11 +710,21 @@ public class MyGame extends VariableFrameRateGame {
         entity.setPrimitive(Primitive.TRIANGLES);
         node = sm.getRootSceneNode().createChildSceneNode("PartNode" + Integer.toString(itemCount));
         node.attachObject(entity);
-        node.setLocalPosition(randomFloat(-8, 8), 0.25f , randomFloat(-8, 8));
+        setRandomPoint(node, 0.0f, 8.0f);
         node.setLocalScale(.25f, .25f, .25f);
         node.setLocalRotation(UP);
 //            sc.addNode(node);
         partsList.add(node);
+    }
+
+    private void setRandomPoint(Node node, float minRadius, float maxRadius) {
+        float degree = randomFloat(0, 359);
+        float radius = randomFloat(Math.round(minRadius), Math.round(maxRadius));
+        node.setLocalPosition(
+                (float) (radius * Math.sin(Math.toRadians(degree))),
+                .25f,
+                (float) (radius * Math.cos(Math.toRadians(degree)))
+        );
     }
 
     private float randomFloat (int min, int max) { return (rand.nextInt(max) + min) + rand.nextFloat(); }
@@ -750,8 +766,8 @@ public class MyGame extends VariableFrameRateGame {
                 temptf,
                 up,
                 0.0f);
-        ground.setBounciness(0.2f);
-        ground.setFriction(.2f);
+        ground.setBounciness(0.0f);
+        ground.setFriction(100.0f);
         groundNode.setPhysicsObject(ground);
     }
 

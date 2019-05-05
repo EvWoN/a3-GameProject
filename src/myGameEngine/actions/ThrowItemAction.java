@@ -1,5 +1,6 @@
 package myGameEngine.actions;
 
+import javafx.beans.property.SimpleBooleanProperty;
 import myGameEngine.controller.SquishyBounceController;
 import net.java.games.input.Event;
 import ray.input.action.AbstractInputAction;
@@ -16,15 +17,17 @@ import java.util.Iterator;
 public class ThrowItemAction extends AbstractInputAction {
 
     private SceneNode thrower;
+    private SimpleBooleanProperty holding;
     private SceneManager sm;
     private PhysicsEngine pe;
     private SquishyBounceController sc;
 
-    public ThrowItemAction(SceneNode thrower, SceneManager sm, PhysicsEngine pe, SquishyBounceController sc) {
+    public ThrowItemAction(SceneNode thrower, SimpleBooleanProperty holding, SceneManager sm, PhysicsEngine pe, SquishyBounceController sc) {
         this.thrower = thrower;
         this.sm = sm;
         this.pe = pe;
         this.sc = sc;
+        this.holding = holding;
     }
 
     @Override
@@ -35,7 +38,8 @@ public class ThrowItemAction extends AbstractInputAction {
         Matrix3 worldRotation;
         SceneNode hold;
         double[] temptf;
-        float mass = .5f;
+        float[] boxDim = { .5f, .5f, .5f };
+        float mass = 10.0f;
         PhysicsObject physicsObject;
         while(children.hasNext()) {
             hold = (SceneNode) children.next();
@@ -49,21 +53,27 @@ public class ThrowItemAction extends AbstractInputAction {
                 hold.setLocalRotation(worldRotation);
                 hold.setLocalScale(localScale);
                 temptf = toDoubleArray(hold.getLocalTransform().toFloatArray());
-                physicsObject = pe.addSphereObject(
+                /*physicsObject = pe.addSphereObject(
                         pe.nextUID(),
                         mass,
                         temptf,
                         .5f
+                );*/
+                physicsObject = pe.addBoxObject(
+                        pe.nextUID(),
+                        mass,
+                        temptf,
+                        boxDim
                 );
-                physicsObject.setBounciness(0.8f);
-                physicsObject.setFriction(.5f);
+                physicsObject.setBounciness(0.0f);
+                physicsObject.setFriction(100.0f);
                 hold.setPhysicsObject(physicsObject);
                 sc.removeNode(hold);
                 root.attachChild(hold);
                 hold.getPhysicsObject().applyForce(
-                        thrower.getLocalForwardAxis().x() * 100,
-                        thrower.getLocalForwardAxis().y() * 100,
-                        thrower.getLocalForwardAxis().z() * 100,
+                        thrower.getLocalForwardAxis().x() * 1000,
+                        thrower.getLocalForwardAxis().y() + 1000,
+                        thrower.getLocalForwardAxis().z() * 1000,
                         hold.getLocalPosition().x(),
                         hold.getLocalPosition().y(),
                         hold.getLocalPosition().z()
@@ -75,7 +85,7 @@ public class ThrowItemAction extends AbstractInputAction {
                     hold.attachObject(e);
                 }
                 catch (IOException e) { e.printStackTrace(); }*/
-
+                holding.set(false);
             }
         }
     }
