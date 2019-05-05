@@ -2,6 +2,8 @@ package a3;
 
 import myGameEngine.Managers.Animator;
 import myGameEngine.Managers.Movement2DManager;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.value.ObservableBooleanValue;
 import myGameEngine.Networking.GhostAvatar;
 import myGameEngine.Networking.ProtocolClient;
 import myGameEngine.actions.*;
@@ -72,11 +74,10 @@ public class MyGame extends VariableFrameRateGame {
     private SquishyBounceController sc;
     private OrbitCameraController occ;
 
-    private float elapsTime = 0.0f;
-
     private boolean alone = true;
-    private boolean holdingItem = false;
-    private boolean running = false;
+    private boolean placed = false;
+
+    private SimpleBooleanProperty holdingItem = new SimpleBooleanProperty(false);
 
     private SceneNode astronautNode, groundNode, ufoNode1, ufoNode2, ballNode;
     private SkeletalEntity astronautSkeleton;
@@ -85,6 +86,12 @@ public class MyGame extends VariableFrameRateGame {
 
     private PhysicsEngine physicsEngine;
     private PhysicsObject ball, ground;
+
+    private Random rand;
+
+    private float totalTime;
+
+    private int itemCount;
 
     Camera camera;
 
@@ -116,6 +123,10 @@ public class MyGame extends VariableFrameRateGame {
         super();
         this.serverAddress = serverAddr;
         this.serverPort = sPort;
+        this.rand = new Random();
+        this.partsList = new ArrayList<>();
+        this.totalTime = 0;
+        this.itemCount = 0;
         if (protocol.toUpperCase().compareTo("UDP") == 0) {
             this.serverProtocol = IGameConnection.ProtocolType.UDP;
         }
@@ -165,16 +176,39 @@ public class MyGame extends VariableFrameRateGame {
         rs = (GL4RenderSystem) engine.getRenderSystem();
         float elapsedTimeMillis = engine.getElapsedTimeMillis();
         im.update(elapsedTimeMillis);
+        totalTime += elapsedTimeMillis;
         occ.updateCameraPosition();
         astronautSkeleton.update();
         updatePhysics();
         pickupItems();
-        //checkItems();
+        checkItems();
         moveEnemies();
+        if (Math.round(totalTime / 1000) % 8 == 0)
+        {
+            if(!placed) {
+                try {
+                    makeParts();
+                } catch (IOException e) {
+                    System.out.println("Error in part creation.");
+                }
+                placed = true;
+            }
+        }
+        else placed = false;
+        Iterator<Node> iterator = sm.getRootSceneNode().getChildNodes().iterator();
+        Node hold = null;
+        while(iterator.hasNext())
+        {
+            hold = iterator.next();
+            if(hold.getName().contains("PartNode")) break;
+            hold = null;
+        }
         rs.setHUD(
+                "Seconds: " + Math.round(totalTime / 1000) + " " +
                 astronautNode.getLocalPosition().x() + ", " +
                 astronautNode.getLocalPosition().y() + ", " +
-                astronautNode.getLocalPosition().z()
+                astronautNode.getLocalPosition().z() + ", " +
+                "Holding: " + holdingItem
         );
         //Networking, process packet
         processNetworking(elapsedTimeMillis);
@@ -195,11 +229,11 @@ public class MyGame extends VariableFrameRateGame {
     }
 
     private void pickupItems() {
-        if (holdingItem) return;
+        if (holdingItem.getValue()) return;
         SceneNode hold = null;
         for(SceneNode node : partsList){
             if(isClose(node, astronautNode, 1.0f)) {
-                holdingItem = true;
+                holdingItem.set(true);
                 node.getParent().detachChild(node);
                 astronautNode.attachChild(node);
                 node.setLocalRotation(astronautNode.getLocalRotation());
@@ -214,15 +248,20 @@ public class MyGame extends VariableFrameRateGame {
 
     private void checkItems() {
         Iterator<Node> nodeIterator = sm.getRootSceneNode().getChildNodes().iterator();
+        ArrayList<Node> toBeRemoved = new ArrayList<>();
         Node node;
         while(nodeIterator.hasNext())
         {
             node = nodeIterator.next();
-            if(node.getPhysicsObject() != null && !node.getName().startsWith("Ground")) {
-                if(isClose((SceneNode) node, groundNode, 8.0f)) {
-                    sm.getRootSceneNode().detachChild(node);
-                }
-            }
+            if(node.getPhysicsObject() != null && !node.getName().startsWith("Ground"))
+                if(!isClose((SceneNode) node, groundNode, 8.0f)) toBeRemoved.add(node);
+        }
+
+        nodeIterator = toBeRemoved.iterator();
+        while(nodeIterator.hasNext()) {
+            node = nodeIterator.next();
+            partsList.remove(node);
+            sm.getRootSceneNode().detachChild(node);
         }
     }
 
@@ -282,7 +321,7 @@ public class MyGame extends VariableFrameRateGame {
         MoveBackwardAction moveBackwardAction = new MoveBackwardAction(astronautNode, occ, mm);
         MoveRightAction moveRightAction = new MoveRightAction   (astronautNode, occ, mm);
         MoveLeftAction moveLeftAction = new MoveLeftAction      ( astronautNode, occ, mm);
-        ThrowItemAction throwItemAction = new ThrowItemAction   (astronautNode, sm, physicsEngine, sc);
+        ThrowItemAction throwItemAction = new ThrowItemAction   (astronautNode, holdingItem, sm, physicsEngine, sc);
         //CameraRotate
 //        RotateLeftAction rotateLeftAction = new RotateLeftAction();
 
@@ -393,11 +432,6 @@ public class MyGame extends VariableFrameRateGame {
         groundMeshNode.scale(9f,9f,9f);
         groundNode.attachChild(groundMeshNode);
         groundNode.moveDown(.2f);
-
-        Entity ballEntity = sm.createEntity("Ball", "sphere.obj");
-        ballNode = sm.getRootSceneNode().createChildSceneNode("BallNode");
-        ballNode.attachObject(ballEntity);
-        ballNode.setLocalPosition(-2.0f, 1.0f, 0.0f);
 
         setupLighting();
 
@@ -654,22 +688,31 @@ public class MyGame extends VariableFrameRateGame {
     }
 
     private void makeParts() throws IOException {
-        int numParts = 1;
-        partsList = new ArrayList<>();
         Entity entity;
         SceneNode node;
-        for(int i = 0; i < numParts; ++i){
-            entity = sm.createEntity("PartEntity" + Integer.toString(i), "Thruster.obj");
-            entity.setPrimitive(Primitive.TRIANGLES);
-            node = sm.getRootSceneNode().createChildSceneNode("PartNode" +Integer.toString(i));
-            node.attachObject(entity);
-            node.setLocalPosition(-2.0f, 0.25f , 0.0f);
-            node.setLocalScale(.25f, .25f, .25f);
-            node.setLocalRotation(UP);
+        ++itemCount;
+        entity = sm.createEntity("PartEntity" + Integer.toString(itemCount), "Thruster.obj");
+        entity.setPrimitive(Primitive.TRIANGLES);
+        node = sm.getRootSceneNode().createChildSceneNode("PartNode" + Integer.toString(itemCount));
+        node.attachObject(entity);
+        setRandomPoint(node, 0.0f, 8.0f);
+        node.setLocalScale(.25f, .25f, .25f);
+        node.setLocalRotation(UP);
 //            sc.addNode(node);
-            partsList.add(node);
-        }
+        partsList.add(node);
     }
+
+    private void setRandomPoint(Node node, float minRadius, float maxRadius) {
+        float degree = randomFloat(0, 359);
+        float radius = randomFloat(Math.round(minRadius), Math.round(maxRadius));
+        node.setLocalPosition(
+                (float) (radius * Math.sin(Math.toRadians(degree))),
+                .25f,
+                (float) (radius * Math.cos(Math.toRadians(degree)))
+        );
+    }
+
+    private float randomFloat (int min, int max) { return (rand.nextInt(max) + min) + rand.nextFloat(); }
 
     private boolean isClose(SceneNode node1, SceneNode node2, double minimum) {
         return getDistance(node1, node2) <= minimum;
@@ -708,30 +751,9 @@ public class MyGame extends VariableFrameRateGame {
                 temptf,
                 up,
                 0.0f);
-        ground.setBounciness(0.2f);
-        ground.setFriction(.2f);
+        ground.setBounciness(0.0f);
+        ground.setFriction(100.0f);
         groundNode.setPhysicsObject(ground);
-
-        temptf = toDoubleArray(ballNode.getLocalTransform().toFloatArray());
-        ball = physicsEngine.addSphereObject(
-                physicsEngine.nextUID(),
-                1.0f,
-                temptf,
-                1.0f
-        );
-        ball.setBounciness(1.0f);
-        ball.setFriction(.5f);
-        ballNode.setPhysicsObject(ball);
-        /*
-        temptf = toDoubleArray(sm.getRootSceneNode().getChild("BallNode").getLocalTransform().toFloatArray());
-        ballObject = physicsEngine.addSphereObject(
-                physicsEngine.nextUID(),
-                1.0f,
-                temptf,
-                0.1f
-        );
-        ballObject.setBounciness(1.0f);
-        sm.getRootSceneNode().getChild("BallNode").setPhysicsObject(ballObject);*/
     }
 
     private double[] toDoubleArray(float[] in) {
