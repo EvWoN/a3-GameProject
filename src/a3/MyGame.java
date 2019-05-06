@@ -265,13 +265,14 @@ public class MyGame extends VariableFrameRateGame {
     }
 
     private void moveEnemies() {
-        double distance = 8.0f;
+        double distance = 10.0f;
         Vector3 astronautPos = astronautNode.getLocalPosition();
         ufoNode1.setLocalPosition(
                 (float) (distance * (astronautPos.x() / getDistance(groundNode, astronautNode))),
                 0.0f,
                 (float) (distance * (astronautPos.z() / getDistance(groundNode, astronautNode)))
         );
+        ufoNode1.lookAt(astronautSkeleton.getParentNode());
     }
 
     private void processNetworking(float elapsTime) { // Process packets received by the client from the server
@@ -439,6 +440,20 @@ public class MyGame extends VariableFrameRateGame {
         ufoNode2.attachObject(ufo2);
         ufoNode1.setLocalPosition(8.0f, 0.0f, 0.0f);
         ufoNode2.setLocalPosition(-8.0f, 0.0f, 0.0f);
+    
+    
+        Light plight = sm.createLight(ufoNode1.getName()+"Light", Light.Type.POINT);
+        plight.setDiffuse(new Color(.2f, .2f, 1f));
+        plight.setSpecular(new Color(.2f, .2f, 1.0f));
+        plight.setRange(10f);
+        plight.setFalloffExponent(.2f);
+//        plight.setConeCutoffAngle(Degreef.createFrom(70));
+        plight.setLinearAttenuation(.1f);
+//        plight.setConstantAttenuation();
+        SceneNode plightNode = sm.getRootSceneNode().createChildSceneNode(plight.getName() + "Node");
+        plightNode.attachObject(plight);
+        plightNode.moveUp(1f);
+        ufoNode1.attachChild(plightNode);
 
         //Ground floor
         Entity groundEntity = sm.createEntity("GroundEntity", "mainPlatform.obj");
@@ -477,16 +492,63 @@ public class MyGame extends VariableFrameRateGame {
     }
 
     private void setupLighting() {
-        sm.getAmbientLight().setIntensity(new Color(.1f, .1f, .1f));
+//        sm.getAmbientLight().setIntensity(new Color(.1f, .1f, .1f));
         
         Light plight = sm.createLight("testLamp1", Light.Type.POINT);
-        plight.setAmbient(new Color(.5f, .5f, .5f));
+        plight.setAmbient(new Color(.2f,.2f,.2f));
         plight.setDiffuse(new Color(.9f, .9f, .9f));
         plight.setSpecular(new Color(1.0f, 1.0f, 1.0f));
         plight.setRange(10f);
         SceneNode plightNode = sm.getRootSceneNode().createChildSceneNode("plightNode");
         plightNode.attachObject(plight);
         plightNode.moveUp(3f);
+        
+        Light spotlight = sm.createLight("spotlight", Light.Type.SPOT);
+        spotlight.setDiffuse(new Color(.9f, .9f, .9f));
+        spotlight.setSpecular(new Color(1.0f, 1.0f, 1.0f));
+        spotlight.setRange(10f);
+//        spotlight.setAmbient(new Color(.1f, .1f, .1f));
+        spotlight.setFalloffExponent(10f);
+        SceneNode spotlightNode = sm.getRootSceneNode().createChildSceneNode("spotlightNode");
+        spotlightNode.attachObject(spotlight);
+        astronautSkeleton.getParentSceneNode().attachChild(spotlightNode);
+        spotlightNode.moveUp(1f);
+    
+        Light lavaLight1 = sm.createLight("lavaLight1", Light.Type.POINT);
+        lavaLight1.setDiffuse(new Color(.9f, .2f, .2f));
+        lavaLight1.setSpecular(new Color(.9f, .2f, .2f));
+        lavaLight1.setRange(40f);
+        SceneNode lavaLight1Node = sm.getRootSceneNode().createChildSceneNode(lavaLight1.getName()+"Node");
+        lavaLight1Node.attachObject(lavaLight1);
+        lavaLight1Node.moveRight(15f);
+        lavaLight1Node.moveDown(8f);
+    
+        Light lavaLight2 = sm.createLight("lavaLight2", Light.Type.POINT);
+        lavaLight2.setDiffuse(new Color(.9f, .2f, .2f));
+        lavaLight2.setSpecular(new Color(.9f, .2f, .2f));
+        lavaLight2.setRange(40f);
+        SceneNode lavaLight2Node = sm.getRootSceneNode().createChildSceneNode(lavaLight2.getName()+"Node");
+        lavaLight2Node.attachObject(lavaLight2);
+        lavaLight2Node.moveLeft(15f);
+        lavaLight2Node.moveDown(8f);
+    
+        Light lavaLight3 = sm.createLight("lavaLight3", Light.Type.POINT);
+        lavaLight3.setDiffuse(new Color(.9f, .2f, .2f));
+        lavaLight3.setSpecular(new Color(.9f, .2f, .2f));
+        lavaLight3.setRange(40f);
+        SceneNode lavaLight3Node = sm.getRootSceneNode().createChildSceneNode(lavaLight3.getName()+"Node");
+        lavaLight3Node.attachObject(lavaLight3);
+        lavaLight3Node.moveForward(15f);
+        lavaLight3Node.moveDown(8f);
+        
+        Light lavaLight4 = sm.createLight("lavaLight4", Light.Type.POINT);
+        lavaLight4.setDiffuse(new Color(.9f, .2f, .2f));
+        lavaLight4.setSpecular(new Color(.9f, .2f, .2f));
+        lavaLight4.setRange(40f);
+        SceneNode lavaLight4Node = sm.getRootSceneNode().createChildSceneNode(lavaLight4.getName()+"Node");
+        lavaLight4Node.attachObject(lavaLight4);
+        lavaLight4Node.moveBackward(15f);
+        lavaLight4Node.moveDown(8f);
     
 //        Light predlight = sm.createLight("redLamp1", Light.Type.POINT);
 //        predlight.setAmbient(new Color(.5f, .5f, .5f));
