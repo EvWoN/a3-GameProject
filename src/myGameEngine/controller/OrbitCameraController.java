@@ -29,7 +29,6 @@ public class OrbitCameraController {
     private Vector3 worldUpVec;
     
     public OrbitCameraController(Camera cam, Node camN, List targs) {
-        System.out.println(targs);
         camera = cam;
         cameraN = camN;
         targets = targs;
@@ -82,7 +81,7 @@ public class OrbitCameraController {
         Action orbitEActionKb = new OrbitElevationActionKeyboard(orbitEAction);
         if(controller.getType().equals(Controller.Type.GAMEPAD)) {
             im.associateAction(controller, Component.Identifier.Axis.RX, orbitAAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
-            im.associateAction(controller, Component.Identifier.Button._1, orbitRAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+            im.associateAction(controller, Component.Identifier.Button._3, orbitRAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
             im.associateAction(controller, Component.Identifier.Button._2, orbitRActionKb, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
             im.associateAction(controller, Component.Identifier.Axis.RY, orbitEAction,InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
         } else if(controller.getType().equals(Controller.Type.KEYBOARD)) {

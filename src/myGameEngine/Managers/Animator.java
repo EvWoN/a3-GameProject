@@ -55,6 +55,18 @@ public class Animator {
         this.mm = mm;
     }
     
+    public void playMove(){
+        if (currentAnimation.equals(onIdle)) {
+            playMoveAnimation();
+        }
+    }
+    
+    public void playIdle(){
+        if (currentAnimation.equals(onMove)) {
+            playIdleAnimation();
+        }
+    }
+    
     private void playMoveAnimation(){
         currentAnimation = onMove;
         skeleton.stopAnimation();

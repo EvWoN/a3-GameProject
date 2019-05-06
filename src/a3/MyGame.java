@@ -321,10 +321,9 @@ public class MyGame extends VariableFrameRateGame {
         MoveRightAction moveRightAction = new MoveRightAction   (astronautNode, occ, mm);
         MoveLeftAction moveLeftAction = new MoveLeftAction      ( astronautNode, occ, mm);
         ThrowItemAction throwItemAction = new ThrowItemAction   (astronautNode, holdingItem, sm, physicsEngine, sc);
-        //CameraRotate
-//        RotateLeftAction rotateLeftAction = new RotateLeftAction();
 
         for (Controller c : controllers) {
+            occ.setupInput(im,c);
             if (c.getType() == Controller.Type.KEYBOARD) {
                 im.associateAction(
                         c,
@@ -356,8 +355,27 @@ public class MyGame extends VariableFrameRateGame {
                         throwItemAction,
                         InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY
                 );
-                
-                occ.setupInput(im,c);
+            }
+    
+            if (c.getType() == Controller.Type.GAMEPAD) {
+                im.associateAction(
+                        c,
+                        Component.Identifier.Axis.X,
+                        moveRightAction,
+                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
+                );
+                im.associateAction(
+                        c,
+                        Component.Identifier.Axis.Y,
+                        moveBackwardAction,
+                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN
+                );
+                im.associateAction(
+                        c,
+                        Component.Identifier.Button._1,
+                        throwItemAction,
+                        InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY
+                );
             }
         }
     }

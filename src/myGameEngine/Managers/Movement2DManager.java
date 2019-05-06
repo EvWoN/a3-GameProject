@@ -59,18 +59,34 @@ public class Movement2DManager {
     
                 nodeDistanceMovedTable.put(node,distance);
                 //Checking if within bound && we did infact move
-                if(newPosition.length() <= radiusConstraint && !newPosition.equals(node.getLocalPosition())) {
+                if(!distance.isZeroLength()) {
                     try {
                         node.lookAt(newPosition);
                     } catch (Exception e) {
-                        System.out.println("NewPosition:\t" + newPosition);
-                        System.out.println("WorldPosition:\t" + node.getWorldPosition());
+                        System.out.println("Error - NewPosition:\t" + newPosition);
+                        System.out.println("Error - WorldPosition:\t" + node.getWorldPosition());
                     }
-                    node.setLocalPosition(newPosition);
+                    if (!move(node,newPosition)) {
+                        float bound = (newPosition.length() - radiusConstraint)/newPosition.length();
+                        move(node,newPosition.mult(1-bound));
+                    }
                 }
             }
         });
         nodeMovementQueueTable.clear();
+    }
+    
+    /**
+     * Tries to move object within radius
+     * @param node Node to be moved
+     * @param newPosition position to attempt a move to
+     * @return returns false if object wasn't able to be moved because of radius constraint
+     */
+    private boolean move(Node node, Vector3 newPosition){
+        if (newPosition.length() <= radiusConstraint) {
+            node.setLocalPosition(newPosition);
+            return true;
+        } return false;
     }
     
     public Hashtable<Node, Vector3> getNodeDistanceMovedTable() {
