@@ -287,19 +287,21 @@ public class MyGame extends VariableFrameRateGame {
     @Override
     protected void setupWindowViewports(RenderWindow rw) {
         System.out.println("SetupWindowViewports");
-        rw.addKeyListener(this);
         Viewport topViewport = rw.getViewport(0);
         topViewport.setClearColor(new Color(.1f, .1f, .1f));
+        //This is throwing an error on "ESC" key
+//        rw.addKeyListener(this);
     }
 
     @Override
     protected void setupWindow(RenderSystem rs, GraphicsEnvironment ge) {
         System.out.println("SetupWindow");
-        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        double screenPortion = 0.85; //mitigate taskbar in windowed mode
-        int width = (int) (screenSize.width * screenPortion);
-        int height = (int) (screenSize.height * screenPortion);
-        rs.createRenderWindow(new DisplayMode(width, height, 24, 60), false);
+        DisplaySettingsDialog settingsDialog = new DisplaySettingsDialog(ge.getDefaultScreenDevice());
+        settingsDialog.showIt();
+        DisplayMode selectedDisplayMode = settingsDialog.getSelectedDisplayMode();
+        if (selectedDisplayMode != null) {
+            rs.createRenderWindow(selectedDisplayMode,settingsDialog.isFullScreenModeSelected());
+        } else this.exit();
     }
 
     private void setupControls(SceneManager sm) {
@@ -322,6 +324,7 @@ public class MyGame extends VariableFrameRateGame {
         MoveRightAction moveRightAction = new MoveRightAction   (astronautNode, occ, mm);
         MoveLeftAction moveLeftAction = new MoveLeftAction      ( astronautNode, occ, mm);
         ThrowItemAction throwItemAction = new ThrowItemAction   (astronautNode, holdingItem, sm, physicsEngine, sc);
+        GameQuitAction gameQuitAction = new GameQuitAction(this);
 
         for (Controller c : controllers) {
             occ.setupInput(im,c);
@@ -354,6 +357,12 @@ public class MyGame extends VariableFrameRateGame {
                         c,
                         Component.Identifier.Key.SPACE,
                         throwItemAction,
+                        InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY
+                );
+                im.associateAction(
+                        c,
+                        Component.Identifier.Key.ESCAPE,
+                        gameQuitAction,
                         InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY
                 );
             }
