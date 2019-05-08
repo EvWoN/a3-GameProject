@@ -231,14 +231,14 @@ public class MyGame extends VariableFrameRateGame {
         if (holdingItem.getValue()) return;
         SceneNode hold = null;
         for(SceneNode node : partsList){
-            if(isClose(node, astronautNode, 1.0f)) {
+            if(isClose3D(node, astronautNode, 1.0f)) {
                 holdingItem.set(true);
+                node.setPhysicsObject(null);
                 node.getParent().detachChild(node);
                 astronautNode.attachChild(node);
                 node.setLocalRotation(astronautNode.getLocalRotation());
-                node.setLocalPosition(0.0f, 3.0f, 0.0f);
+                node.setLocalPosition(0.0f, 5.0f, 0.0f);
                 hold = node;
-                follow = node;
                 break;
             }
         }
@@ -253,7 +253,7 @@ public class MyGame extends VariableFrameRateGame {
         {
             node = nodeIterator.next();
             if(node.getPhysicsObject() != null && !node.getName().startsWith("Ground"))
-                if(!isClose((SceneNode) node, groundNode, 8.0f)) toBeRemoved.add(node);
+                if(!isClose2D((SceneNode) node, groundNode, 8.0f)) toBeRemoved.add(node);
         }
 
         nodeIterator = toBeRemoved.iterator();
@@ -266,11 +266,12 @@ public class MyGame extends VariableFrameRateGame {
 
     private void moveEnemies() {
         double distance = 10.0f;
+        double radius = getDistance2D(groundNode, astronautNode);
         Vector3 astronautPos = astronautNode.getLocalPosition();
         ufoNode1.setLocalPosition(
-                (float) (distance * (astronautPos.x() / getDistance(groundNode, astronautNode))),
+                (float) (distance * (astronautPos.x() / radius)),
                 0.0f,
-                (float) (distance * (astronautPos.z() / getDistance(groundNode, astronautNode)))
+                (float) (distance * (astronautPos.z() / radius))
         );
         ufoNode1.lookAt(astronautSkeleton.getParentNode());
     }
@@ -323,7 +324,7 @@ public class MyGame extends VariableFrameRateGame {
         MoveBackwardAction moveBackwardAction = new MoveBackwardAction(astronautNode, occ, mm);
         MoveRightAction moveRightAction = new MoveRightAction   (astronautNode, occ, mm);
         MoveLeftAction moveLeftAction = new MoveLeftAction      ( astronautNode, occ, mm);
-        ThrowItemAction throwItemAction = new ThrowItemAction   (astronautNode, holdingItem, sm, physicsEngine, sc);
+        ThrowItemAction throwItemAction = new ThrowItemAction   (astronautNode, holdingItem, partsList, physicsEngine, sc);
         GameQuitAction gameQuitAction = new GameQuitAction(this);
 
         for (Controller c : controllers) {
@@ -802,11 +803,15 @@ public class MyGame extends VariableFrameRateGame {
 
     private float randomFloat (int min, int max) { return (rand.nextInt(max) + min) + rand.nextFloat(); }
 
-    private boolean isClose(SceneNode node1, SceneNode node2, double minimum) {
-        return getDistance(node1, node2) <= minimum;
+    private boolean isClose2D(SceneNode node1, SceneNode node2, double minimum) {
+        return getDistance2D(node1, node2) <= minimum;
     }
 
-    private double getDistance(SceneNode node1, SceneNode node2) {
+    private boolean isClose3D(SceneNode node1, SceneNode node2, double minimum) {
+        return getDistance3D(node1, node2) <= minimum;
+    }
+
+    private double getDistance2D(SceneNode node1, SceneNode node2) {
         Vector3 a, b;
         double distance, dx, dz;
         a = node1.getLocalPosition();
@@ -816,6 +821,21 @@ public class MyGame extends VariableFrameRateGame {
         dx *= dx;
         dz *= dz;
         distance = dx + dz;
+        return Math.sqrt(distance);
+    }
+
+    private double getDistance3D(SceneNode node1, SceneNode node2) {
+        Vector3 a, b;
+        double distance, dx, dy, dz;
+        a = node1.getLocalPosition();
+        b = node2.getLocalPosition();
+        dx = a.x() - b.x();
+        dy = a.y() - b.y();
+        dz = a.z() - b.z();
+        dx *= dx;
+        dy *= dy;
+        dz *= dz;
+        distance = dx + dy + dz;
         return Math.sqrt(distance);
     }
 
