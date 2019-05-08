@@ -77,14 +77,16 @@ public class MyGame extends VariableFrameRateGame {
     private boolean placed = false;
 
     private SimpleBooleanProperty holdingItem = new SimpleBooleanProperty(false);
+    private SimpleBooleanProperty followGround = new SimpleBooleanProperty(false);
 
-    private SceneNode astronautNode, groundNode, ufoNode1, ufoNode2, ballNode;
+    private SceneNode astronautNode, groundNode, ufoNode1, ufoNode2;
+    private Tessellation tesselationEntity;
     private SkeletalEntity astronautSkeleton;
 
     private ArrayList<SceneNode> partsList;
 
     private PhysicsEngine physicsEngine;
-    private PhysicsObject ball, ground;
+    private PhysicsObject ground;
 
     private Random rand;
 
@@ -323,9 +325,10 @@ public class MyGame extends VariableFrameRateGame {
         MoveForwardAction moveForwardAction = new MoveForwardAction(astronautNode, occ, mm);
         MoveBackwardAction moveBackwardAction = new MoveBackwardAction(astronautNode, occ, mm);
         MoveRightAction moveRightAction = new MoveRightAction   (astronautNode, occ, mm);
-        MoveLeftAction moveLeftAction = new MoveLeftAction      ( astronautNode, occ, mm);
+        MoveLeftAction moveLeftAction = new MoveLeftAction      (astronautNode, occ, mm);
         ThrowItemAction throwItemAction = new ThrowItemAction   (astronautNode, holdingItem, partsList, physicsEngine, sc);
         GameQuitAction gameQuitAction = new GameQuitAction(this);
+        ToggleMovementAction toggleMovementAction = new ToggleMovementAction(followGround, astronautNode);
 
         for (Controller c : controllers) {
             occ.setupInput(im,c);
@@ -364,6 +367,12 @@ public class MyGame extends VariableFrameRateGame {
                         c,
                         Component.Identifier.Key.ESCAPE,
                         gameQuitAction,
+                        InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY
+                );
+                im.associateAction(
+                        c,
+                        Component.Identifier.Key.P,
+                        toggleMovementAction,
                         InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY
                 );
             }
@@ -488,7 +497,8 @@ public class MyGame extends VariableFrameRateGame {
         initPhysicsSystem();
         createPhysicsWorld();
         setupControls(sm);
-//      makeGroundFloor(eng,sm);
+        makeGroundFloor();
+        makeHeightMap();
     }
 
     private SkeletalEntity rigSkeleton(String name, String... actions) throws IOException {
@@ -658,7 +668,7 @@ public class MyGame extends VariableFrameRateGame {
         lineZN.attachObject(lineZ);
     }
 
-    private SceneNode makeGroundFloor(Engine eng, SceneManager sm) throws IOException {
+    private void makeGroundFloor() throws IOException {
         ManualObject groundFloorObj = sm.createManualObject("groundFloor");
         ManualObjectSection groundFloorSect = groundFloorObj.createManualSection("groundFloorSection");
         groundFloorObj.setGpuShaderProgram(sm.getRenderSystem().getGpuShaderProgram(GpuShaderProgram.Type.RENDERING));
@@ -668,13 +678,14 @@ public class MyGame extends VariableFrameRateGame {
                 -5.0f, 0.0f, -5.0f, -5.0f, 0.0f, 5.0f, 5.0f, 0.0f, -5.0f//tri`2
 
         };
-        int[] indices = new int[]{0, 1, 2, 3, 4, 5};
+
+            int[] indices = new int[]{0, 1, 2, 3, 4, 5};
         groundFloorSect.setVertexBuffer(BufferUtil.directFloatBuffer(vertices));
         groundFloorSect.setIndexBuffer(BufferUtil.directIntBuffer(indices));
         //Texture
         Texture tex = eng.getTextureManager().getAssetByPath("sun.jpeg");
         TextureState texState = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
-        texState.setTexture(tex);
+            texState.setTexture(tex);
 
         FrontFaceState faceState = (FrontFaceState) sm.getRenderSystem().createRenderState(RenderState.Type.FRONT_FACE);
         groundFloorObj.setDataSource(Renderable.DataSource.INDEX_BUFFER);
@@ -685,10 +696,20 @@ public class MyGame extends VariableFrameRateGame {
 
         SceneNode groundFloorNode = sm.getRootSceneNode().createChildSceneNode(groundFloorObj.getName() + "Node");
         groundFloorNode.attachObject(groundFloorObj);
-
         groundFloorNode.moveDown(8f);
         groundFloorNode.scale(10f,10f,10f);
-        return groundFloorNode;
+    }
+
+    private void makeHeightMap() {
+        tesselationEntity = sm.createTessellation("TesselationEntity", 6);
+        SceneNode tesselationNode = sm.getRootSceneNode().createChildSceneNode("TesselationNode");
+
+        tesselationEntity.setSubdivisions(8f);
+        tesselationNode.attachObject(tesselationEntity);
+        tesselationNode.setLocalScale(10, 20, 10);
+        tesselationNode.moveDown(30.0f);
+        tesselationEntity.setHeightMap(eng, "AnotherHeightMap.jpg");
+        tesselationEntity.setTexture(eng, "sun.jpeg");
     }
 
     private ManualObject makeXIndicator(Engine eng, SceneManager sm) throws IOException {
@@ -939,5 +960,19 @@ public class MyGame extends VariableFrameRateGame {
             astronaut.setPrimitive(Primitive.TRIANGLES);
         }
         catch(IOException e) { System.out.println(fileName + " not found."); }
+    }
+
+    private void updateVerticalPosition() {
+        Vector3 worldAvatarPosition = astronautNode.getWorldPosition();
+        Vector3 localAvatarPosition = astronautNode.getLocalPosition();
+        Vector3 newAvatarPosition = Vector3f.createFrom(
+            localAvatarPosition.x(),
+            tesselationEntity.getWorldHeight(
+                worldAvatarPosition.x(),
+                worldAvatarPosition.z()
+            ),
+            localAvatarPosition.z()
+        );
+        astronautNode.setLocalPosition(newAvatarPosition);
     }
 }

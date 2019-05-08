@@ -12,19 +12,20 @@ import ray.rage.scene.SceneNode;
 import ray.rml.Matrix3;
 import ray.rml.Vector3;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 
 public class ThrowItemAction extends AbstractInputAction {
 
     private SceneNode thrower;
     private SimpleBooleanProperty holding;
-    private SceneManager sm;
+    private ArrayList<SceneNode> partsList;
     private PhysicsEngine pe;
     private SquishyBounceController sc;
 
-    public ThrowItemAction(SceneNode thrower, SimpleBooleanProperty holding, SceneManager sm, PhysicsEngine pe, SquishyBounceController sc) {
+    public ThrowItemAction(SceneNode thrower, SimpleBooleanProperty holding, ArrayList<SceneNode> partsList, PhysicsEngine pe, SquishyBounceController sc) {
         this.thrower = thrower;
-        this.sm = sm;
+        this.partsList = partsList;
         this.pe = pe;
         this.sc = sc;
         this.holding = holding;
@@ -53,12 +54,6 @@ public class ThrowItemAction extends AbstractInputAction {
                 hold.setLocalRotation(worldRotation);
                 hold.setLocalScale(localScale);
                 temptf = toDoubleArray(hold.getLocalTransform().toFloatArray());
-                /*physicsObject = pe.addSphereObject(
-                        pe.nextUID(),
-                        mass,
-                        temptf,
-                        .5f
-                );*/
                 physicsObject = pe.addBoxObject(
                         pe.nextUID(),
                         mass,
@@ -78,13 +73,7 @@ public class ThrowItemAction extends AbstractInputAction {
                         hold.getLocalPosition().y(),
                         hold.getLocalPosition().z()
                 );
-                /*
-                try {
-                    Entity e = sm.createEntity("Test", "cube.obj");
-                    e.setPrimitive(Renderable.Primitive.TRIANGLES);
-                    hold.attachObject(e);
-                }
-                catch (IOException e) { e.printStackTrace(); }*/
+                partsList.add(hold);
                 holding.set(false);
             }
         }
