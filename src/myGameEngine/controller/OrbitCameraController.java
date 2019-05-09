@@ -22,9 +22,11 @@ public class OrbitCameraController {
     private Vector3 cameraFocus;
     private float cameraAzimuth;//rotation of camera around Y axis
     private float cameraElevation;//elevation of camera above targets
-    private float minElev = 5f, maxElev = 80f;//Elevation constraints in deg
+//    private float minElev = 5f, maxElev = 80f;//Elevation constraints in deg
+    private float minElev = -40f, maxElev = 80f;//Elevation constraints in deg
     private float radius;//distance between camera and targets
-    private float minRad = 10f, maxRad = 17f;//radius constraints
+//    private float minRad = 10f, maxRad = 17f;//radius constraints
+    private float minRad = 2f, maxRad = 50f;//radius constraints=
     private Vector3 targetPos;//targets’s position in the world
     private Vector3 worldUpVec;
     
@@ -173,7 +175,7 @@ public class OrbitCameraController {
                     moveInAmount = 0.0f;
                 }
             }
-            float newRad = radius + moveInAmount/20;
+            float newRad = radius + moveInAmount/10;
             //Checking zoom values
             if(minRad > newRad){
                 radius = minRad;

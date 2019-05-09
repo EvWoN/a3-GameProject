@@ -2,6 +2,7 @@ package a3;
 
 import javafx.beans.property.SimpleBooleanProperty;
 import myGameEngine.Managers.Animator;
+import myGameEngine.Managers.Builder;
 import myGameEngine.Managers.Movement2DManager;
 import myGameEngine.Networking.GhostAvatar;
 import myGameEngine.Networking.ProtocolClient;
@@ -317,14 +318,18 @@ public class MyGame extends VariableFrameRateGame {
         Camera camera = sm.getCamera("Camera");
         occ = new OrbitCameraController(camera,cameraNode,groundNode,astronautNode);
     
-        //Actions
+        Builder builder = new Builder(sm.getSceneNode("spaceshipNode"),sm);
+        builder.setPointsToBuild(10);
+        
         //Movement
         MoveForwardAction moveForwardAction = new MoveForwardAction(astronautNode, occ, mm);
         MoveBackwardAction moveBackwardAction = new MoveBackwardAction(astronautNode, occ, mm);
         MoveRightAction moveRightAction = new MoveRightAction   (astronautNode, occ, mm);
         MoveLeftAction moveLeftAction = new MoveLeftAction      ( astronautNode, occ, mm);
+        //Actions
         ThrowItemAction throwItemAction = new ThrowItemAction   (astronautNode, holdingItem, sm, physicsEngine, sc);
         GameQuitAction gameQuitAction = new GameQuitAction(this);
+        BuildAction buildAction = new BuildAction(this,holdingItem,builder,1000);
 
         for (Controller c : controllers) {
             occ.setupInput(im,c);
@@ -365,6 +370,10 @@ public class MyGame extends VariableFrameRateGame {
                         gameQuitAction,
                         InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY
                 );
+                im.associateAction(c,
+                        Component.Identifier.Key.E,
+                        buildAction,
+                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
             }
     
             if (c.getType() == Controller.Type.GAMEPAD) {
@@ -428,13 +437,26 @@ public class MyGame extends VariableFrameRateGame {
         initControllers(sm);
 
         astronautSkeleton = rigSkeleton("astronaut", "run", "jump", "idle");
-
         astronautNode = sm.getRootSceneNode().createChildSceneNode("astronautNode");
         astronautNode.attachObject(astronautSkeleton);
         astronautNode.scale(0.3f, 0.3f, 0.3f);
         astronautNode.setLocalRotation(UP);
         setAstronautTexture(astronautSkeleton);
-
+    
+        //Ground floor
+        Entity spaceshipObj = sm.createEntity("spaceshipObj", "assembeled_ship.obj");
+        SceneNode spaceshipObjNode = sm.createSceneNode("spaceshipObjNode");
+        SceneNode spaceshipNode = sm.getRootSceneNode().createChildSceneNode("spaceshipNode");
+        spaceshipObjNode.attachObject(spaceshipObj);
+//        spaceshipObjNode.scale(9f,9f,9f);
+        spaceshipNode.attachChild(spaceshipObjNode);
+        spaceshipObjNode.moveForward(.8f);
+//        spaceshipNode.moveUp(10f);
+        spaceshipNode.setLocalPosition(0.0f, 0.0f, 0.0f);
+        spaceshipNode.moveLeft(6f);
+        spaceshipNode.moveUp(.2f);
+//        spaceshipNode.moveDown(.2f);
+    
         //Scene axis
         showAxis(eng, sm);
 
@@ -915,6 +937,7 @@ public class MyGame extends VariableFrameRateGame {
             Texture tex = eng.getTextureManager().getAssetByPath(fileName);
             TextureState texState = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
             texState.setTexture(tex);
+
             astronaut.setRenderState(texState);
             astronaut.setPrimitive(Primitive.TRIANGLES);
         }
