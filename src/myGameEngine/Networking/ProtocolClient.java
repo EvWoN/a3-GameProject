@@ -38,7 +38,7 @@ public class ProtocolClient extends GameConnectionClient {
             {
                 if (msgTokens[1].compareTo("success") == 0) {
                     game.setIsConnected(true);
-                    sendCreateMessage("player", game.getPlayerPosition(), game.getPlayerHeading());
+                    sendCreateMessage("astronaut", game.getPlayerPosition(), game.getPlayerHeading());
                 }
                 if (msgTokens[1].compareTo("failure") == 0) {
                     game.setIsConnected(false);
@@ -202,6 +202,7 @@ public class ProtocolClient extends GameConnectionClient {
                                 head.x() + "," +
                                 head.y() + "," +
                                 head.z() + ",";
+            // System.out.println(message);
             sendPacket(message);
         }
         catch (IOException e) { e.printStackTrace(); }

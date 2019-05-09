@@ -65,7 +65,6 @@ public class MyGame extends VariableFrameRateGame {
     private int serverPort;
     private IGameConnection.ProtocolType serverProtocol;
     private ProtocolClient protClient;
-    public boolean isClientConnected;
     private List<UUID> gameObjectsToRemove;
 
     //Controllers
@@ -73,12 +72,13 @@ public class MyGame extends VariableFrameRateGame {
     private SquishyBounceController sc;
     private OrbitCameraController occ;
 
+    public boolean isClientConnected = false;
     private boolean alone = true;
     private boolean placed = false;
-    private boolean host = true;
 
     private SimpleBooleanProperty holdingItem = new SimpleBooleanProperty(false);
     private SimpleBooleanProperty followGround = new SimpleBooleanProperty(false);
+    private SimpleBooleanProperty host = new SimpleBooleanProperty(false);
 
     private SceneNode astronautNode, groundNode, ufoNode1, ufoNode2;
     private Tessellation tesselationEntity;
@@ -166,8 +166,9 @@ public class MyGame extends VariableFrameRateGame {
             System.out.println("Trying to join");
             protClient.sendJoinMessage();
             //TODO - boolean return on join
-            isClientConnected = true;
+            //isClientConnected = true;
         }
+        mm.setClient(protClient);
     }
 
     @Override
@@ -179,7 +180,7 @@ public class MyGame extends VariableFrameRateGame {
         totalTime += elapsedTimeMillis;
         occ.updateCameraPosition();
         astronautSkeleton.update();
-        if(host) {
+        if(host.get()) {
             updatePhysics();
             pickupItems();
             checkItems();
@@ -197,10 +198,7 @@ public class MyGame extends VariableFrameRateGame {
         }
         rs.setHUD(
                 "Seconds: " + Math.round(totalTime / 1000) + " " +
-                astronautNode.getLocalPosition().x() + ", " +
-                astronautNode.getLocalPosition().y() + ", " +
-                astronautNode.getLocalPosition().z() + ", " +
-                "Holding: " + holdingItem
+                "Host: " + host.get()
         );
         //Networking, process packet
         processNetworking(elapsedTimeMillis);
@@ -269,13 +267,14 @@ public class MyGame extends VariableFrameRateGame {
         ufoNode1.lookAt(astronautSkeleton.getParentNode());
     }
 
-    private void processNetworking(float elapsTime) { // Process packets received by the client from the server
+    private boolean processNetworking(float elapsTime) { // Process packets received by the client from the server
         if (protClient != null)
             protClient.processPackets();
         // remove ghost avatars for players who have left the game
         Iterator<UUID> it = gameObjectsToRemove.iterator();
         while (it.hasNext()) { sm.destroySceneNode(it.next().toString()); }
         gameObjectsToRemove.clear();
+        return true;
     }
 
     @Override
@@ -300,7 +299,7 @@ public class MyGame extends VariableFrameRateGame {
 
     private void setupControls(SceneManager sm) {
         System.out.println("SetupControls");
-        mm = new Movement2DManager(8f);
+        mm = new Movement2DManager(8f, protClient);
         animator = new Animator(astronautSkeleton,mm,"run",.8f,"idle",.4f);
         
         im = new GenericInputManager();
@@ -320,6 +319,7 @@ public class MyGame extends VariableFrameRateGame {
         ThrowItemAction throwItemAction = new ThrowItemAction   (astronautNode, holdingItem, partsList, physicsEngine, sc);
         GameQuitAction gameQuitAction = new GameQuitAction(this);
         ToggleMovementAction toggleMovementAction = new ToggleMovementAction(followGround, astronautNode);
+        ToggleHostAction toggleHostAction = new ToggleHostAction(host);
 
         for (Controller c : controllers) {
             occ.setupInput(im,c);
@@ -364,6 +364,12 @@ public class MyGame extends VariableFrameRateGame {
                         c,
                         Component.Identifier.Key.P,
                         toggleMovementAction,
+                        InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY
+                );
+                im.associateAction(
+                        c,
+                        Component.Identifier.Key.H,
+                        toggleHostAction,
                         InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY
                 );
             }
@@ -447,8 +453,7 @@ public class MyGame extends VariableFrameRateGame {
         ufoNode2.attachObject(ufo2);
         ufoNode1.setLocalPosition(8.0f, 0.0f, 0.0f);
         ufoNode2.setLocalPosition(-8.0f, 0.0f, 0.0f);
-    
-    
+
         Light plight = sm.createLight(ufoNode1.getName()+"Light", Light.Type.POINT);
         plight.setDiffuse(new Color(.2f, .2f, 1f));
         plight.setSpecular(new Color(.2f, .2f, 1.0f));
@@ -480,8 +485,6 @@ public class MyGame extends VariableFrameRateGame {
         sc = new SquishyBounceController();
         sm.addController(sc);
 
-        makeParts();
-
         initPhysicsSystem();
         createPhysicsWorld();
         setupControls(sm);
@@ -489,6 +492,7 @@ public class MyGame extends VariableFrameRateGame {
         makeHeightMap();
         setupNetworking();
         processNetworking(eng.getElapsedTimeMillis());
+        System.out.println(isClientConnected);
     }
 
     private SkeletalEntity rigSkeleton(String name, String... actions) throws IOException {
@@ -915,7 +919,7 @@ public class MyGame extends VariableFrameRateGame {
 
         Entity ghostEntity = sm.createEntity(type + uuid.toString(), file);
 
-        if(type.equals("player")) setAstronautTexture(ghostEntity);
+        if(type.equals("astronaut")) setAstronautTexture(ghostEntity);
 
         SceneNode ghostNode = sm.getRootSceneNode().createChildSceneNode(ghostEntity.getName() + "Node");
 
