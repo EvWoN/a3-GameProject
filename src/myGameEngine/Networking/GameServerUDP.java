@@ -37,12 +37,13 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
                 }
             }
             // case where server receives a CREATE message
-            // format: create,localid,x,y,z
+            // format: create,type,localid,x,y,z
             if (msgTokens[0].compareTo("create") == 0) {
                 UUID clientID = UUID.fromString(msgTokens[1]);
-                String[] pos = {msgTokens[2], msgTokens[3], msgTokens[4]};
-                String[] head = { msgTokens[5], msgTokens[6], msgTokens[7] };
-                sendCreateMessages(clientID, pos, head);
+                String type = msgTokens[2];
+                String[] pos = {msgTokens[3], msgTokens[4], msgTokens[5]};
+                String[] head = { msgTokens[6], msgTokens[7], msgTokens[8] };
+                sendCreateMessages(clientID, type, pos, head);
                 sendWantsDetailsMessages(clientID);
             }
             // case where server receives a BYE message
@@ -57,9 +58,10 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
             if (msgTokens[0].compareTo("dsfr") == 0) {
                 UUID clientID = UUID.fromString(msgTokens[1]);
                 UUID remoteID = UUID.fromString(msgTokens[2]);
-                String[] pos = { msgTokens[3], msgTokens[4], msgTokens[5] };
-                String[] head = { msgTokens[5], msgTokens[6], msgTokens[7] };
-                sendDetailsMessage(clientID, remoteID, pos, head);
+                String type = msgTokens[3];
+                String[] pos = { msgTokens[4], msgTokens[5], msgTokens[6] };
+                String[] head = { msgTokens[7], msgTokens[8], msgTokens[9] };
+                sendDetailsMessage(clientID, remoteID, type, pos, head);
             }
             // case where server receives a MOVE message
             // format: move, localId, x, y, z, u, v, n
@@ -83,17 +85,17 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
     }
 
     // format: create, remoteId, x, y, z, u, v, n
-    public void sendCreateMessages(UUID clientID, String[] position, String[] head) {
+    public void sendCreateMessages(UUID clientID, String type, String[] position, String[] head) {
         try {
             String message =    "create,"  +
                                 clientID.toString() + "," +
+                                type + "," +
                                 position[0] + "," +
                                 position[1] + "," +
                                 position[2] + "," +
                                 head[0] + "," +
                                 head[1] + "," +
-                                head[2];
-            
+                                head[2] + ",";
             forwardPacketToAll(message, clientID);
         }
         catch (IOException e) { e.printStackTrace(); }
@@ -114,11 +116,12 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
      * @param position
      * @param head
      */
-    public void sendDetailsMessage(UUID clientID, UUID remoteId, String[] position, String[] head) {
+    public void sendDetailsMessage(UUID clientID, UUID remoteId, String type, String[] position, String[] head) {
         try {
             String message =    "dsfr," +
                                 clientID.toString() + "," +
                                 remoteId.toString() + "," +
+                                type + "," +
                                 position[0] + "," +
                                 position[1] + "," +
                                 position[2] + "," +

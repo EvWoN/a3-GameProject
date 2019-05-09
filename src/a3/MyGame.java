@@ -75,6 +75,7 @@ public class MyGame extends VariableFrameRateGame {
 
     private boolean alone = true;
     private boolean placed = false;
+    private boolean host = true;
 
     private SimpleBooleanProperty holdingItem = new SimpleBooleanProperty(false);
     private SimpleBooleanProperty followGround = new SimpleBooleanProperty(false);
@@ -95,8 +96,6 @@ public class MyGame extends VariableFrameRateGame {
     private int itemCount;
 
     Camera camera;
-
-    SceneNode follow = null;
 
     //Forward, up, right
     public Matrix3 LEFT = Matrix3f.createFrom(
@@ -180,29 +179,21 @@ public class MyGame extends VariableFrameRateGame {
         totalTime += elapsedTimeMillis;
         occ.updateCameraPosition();
         astronautSkeleton.update();
-        updatePhysics();
-        pickupItems();
-        checkItems();
-        moveEnemies();
-        if (Math.round(totalTime / 1000) % 8 == 0)
-        {
-            if(!placed) {
-                try {
-                    makeParts();
-                } catch (IOException e) {
-                    System.out.println("Error in part creation.");
+        if(host) {
+            updatePhysics();
+            pickupItems();
+            checkItems();
+            moveEnemies();
+            if (Math.round(totalTime / 1000) % 8 == 0) {
+                if (!placed) {
+                    try {
+                        makeParts();
+                    } catch (IOException e) {
+                        System.out.println("Error in part creation.");
+                    }
+                    placed = true;
                 }
-                placed = true;
-            }
-        }
-        else placed = false;
-        Iterator<Node> iterator = sm.getRootSceneNode().getChildNodes().iterator();
-        Node hold = null;
-        while(iterator.hasNext())
-        {
-            hold = iterator.next();
-            if(hold.getName().contains("PartNode")) break;
-            hold = null;
+            } else placed = false;
         }
         rs.setHUD(
                 "Seconds: " + Math.round(totalTime / 1000) + " " +
@@ -429,9 +420,6 @@ public class MyGame extends VariableFrameRateGame {
     protected void setupScene(Engine eng, SceneManager sm) throws IOException {
         System.out.println("SetupScene");
 
-        setupNetworking();
-        processNetworking(eng.getElapsedTimeMillis());
-
         this.sm = sm;
         this.eng = eng;
 
@@ -499,6 +487,8 @@ public class MyGame extends VariableFrameRateGame {
         setupControls(sm);
         makeGroundFloor();
         makeHeightMap();
+        setupNetworking();
+        processNetworking(eng.getElapsedTimeMillis());
     }
 
     private SkeletalEntity rigSkeleton(String name, String... actions) throws IOException {
@@ -903,37 +893,41 @@ public class MyGame extends VariableFrameRateGame {
         isClientConnected = b;
     }
 
-    public Vector3 getPlayerPosition() {
-        SceneNode player1 = sm.getSceneNode("p1DolphinNode");
-        return player1.getWorldPosition();
-    }
+    public Vector3 getPlayerPosition() { return astronautNode.getWorldPosition(); }
 
     public Vector3 getPlayerHeading() {
-        SceneNode player1 = sm.getSceneNode("p1DolphinNode");
-        System.out.println("Get Heading: " + player1.getWorldRotation());
-        System.out.println(player1.getWorldForwardAxis());
-        return player1.getWorldForwardAxis();
+        System.out.println("Get Heading: " + astronautNode.getWorldRotation());
+        System.out.println(astronautNode.getWorldForwardAxis());
+        return astronautNode.getWorldForwardAxis();
     }
 
-    public GhostAvatar createGhostAvatar(UUID uuid, Vector3 position, Vector3 heading) throws IOException {
+    public GhostAvatar createGhostAvatar(UUID uuid, String type, Vector3 position, Vector3 heading) throws IOException {
         //Player
         alone = false;
 
-        Entity dolphinE_2 = sm.createEntity("p2Dolphin" + uuid.toString(), "astronaut.obj");
+        String file = "sphere.obj";
 
-        setAstronautTexture(dolphinE_2);
+        switch(type) {
+            case "astronaut": file = "astronaut.obj"; break;
+            case "ufo": file = "Ufo.obj"; break;
+            case "part": file = "Thruster.obj"; break;
+        }
 
-        SceneNode dolphinN_2 = sm.getRootSceneNode().createChildSceneNode(dolphinE_2.getName() + "Node");
+        Entity ghostEntity = sm.createEntity(type + uuid.toString(), file);
 
-        dolphinE_2.setPrimitive(Primitive.TRIANGLES);
-        dolphinN_2.attachObject(dolphinE_2);
+        if(type.equals("player")) setAstronautTexture(ghostEntity);
 
-        GhostAvatar ghostAvatar = new GhostAvatar(uuid, dolphinN_2, dolphinE_2);
+        SceneNode ghostNode = sm.getRootSceneNode().createChildSceneNode(ghostEntity.getName() + "Node");
+
+        ghostEntity.setPrimitive(Primitive.TRIANGLES);
+        ghostNode.attachObject(ghostEntity);
+
+        GhostAvatar ghostAvatar = new GhostAvatar(uuid, ghostNode, ghostEntity);
         System.out.println("Position:: " + position + "Heading:: " + heading);
         ghostAvatar.setPosition(position);
         ghostAvatar.setHeading(heading);
 
-        System.out.println("Ghost is being created: " + ghostAvatar + " Node:" + dolphinN_2.toString());
+        System.out.println("Ghost is being created: " + ghostAvatar + " Node:" + ghostNode.toString());
 
         return ghostAvatar;
     }
