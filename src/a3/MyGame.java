@@ -76,16 +76,19 @@ public class MyGame extends VariableFrameRateGame {
 
     private boolean alone = true;
     private boolean placed = false;
+    private boolean host = true;
 
     private SimpleBooleanProperty holdingItem = new SimpleBooleanProperty(false);
+    private SimpleBooleanProperty followGround = new SimpleBooleanProperty(false);
 
-    private SceneNode astronautNode, groundNode, ufoNode1, ufoNode2, ballNode;
+    private SceneNode astronautNode, groundNode, ufoNode1, ufoNode2;
+    private Tessellation tesselationEntity;
     private SkeletalEntity astronautSkeleton;
 
     private ArrayList<SceneNode> partsList;
 
     private PhysicsEngine physicsEngine;
-    private PhysicsObject ball, ground;
+    private PhysicsObject ground;
 
     private Random rand;
 
@@ -94,8 +97,6 @@ public class MyGame extends VariableFrameRateGame {
     private int itemCount;
 
     Camera camera;
-
-    SceneNode follow = null;
 
     //Forward, up, right
     public Matrix3 LEFT = Matrix3f.createFrom(
@@ -179,29 +180,21 @@ public class MyGame extends VariableFrameRateGame {
         totalTime += elapsedTimeMillis;
         occ.updateCameraPosition();
         astronautSkeleton.update();
-        updatePhysics();
-        pickupItems();
-        checkItems();
-        moveEnemies();
-        if (Math.round(totalTime / 1000) % 8 == 0)
-        {
-            if(!placed) {
-                try {
-                    makeParts();
-                } catch (IOException e) {
-                    System.out.println("Error in part creation.");
+        if(host) {
+            updatePhysics();
+            pickupItems();
+            checkItems();
+            moveEnemies();
+            if (Math.round(totalTime / 1000) % 8 == 0) {
+                if (!placed) {
+                    try {
+                        makeParts();
+                    } catch (IOException e) {
+                        System.out.println("Error in part creation.");
+                    }
+                    placed = true;
                 }
-                placed = true;
-            }
-        }
-        else placed = false;
-        Iterator<Node> iterator = sm.getRootSceneNode().getChildNodes().iterator();
-        Node hold = null;
-        while(iterator.hasNext())
-        {
-            hold = iterator.next();
-            if(hold.getName().contains("PartNode")) break;
-            hold = null;
+            } else placed = false;
         }
         rs.setHUD(
                 "Seconds: " + Math.round(totalTime / 1000) + " " +
@@ -232,14 +225,14 @@ public class MyGame extends VariableFrameRateGame {
         if (holdingItem.getValue()) return;
         SceneNode hold = null;
         for(SceneNode node : partsList){
-            if(isClose(node, astronautNode, 1.0f)) {
+            if(isClose3D(node, astronautNode, 1.0f)) {
                 holdingItem.set(true);
+                node.setPhysicsObject(null);
                 node.getParent().detachChild(node);
                 astronautNode.attachChild(node);
                 node.setLocalRotation(astronautNode.getLocalRotation());
-                node.setLocalPosition(0.0f, 3.0f, 0.0f);
+                node.setLocalPosition(0.0f, 5.0f, 0.0f);
                 hold = node;
-                follow = node;
                 break;
             }
         }
@@ -254,7 +247,7 @@ public class MyGame extends VariableFrameRateGame {
         {
             node = nodeIterator.next();
             if(node.getPhysicsObject() != null && !node.getName().startsWith("Ground"))
-                if(!isClose((SceneNode) node, groundNode, 8.0f)) toBeRemoved.add(node);
+                if(!isClose2D((SceneNode) node, groundNode, 8.0f)) toBeRemoved.add(node);
         }
 
         nodeIterator = toBeRemoved.iterator();
@@ -267,11 +260,12 @@ public class MyGame extends VariableFrameRateGame {
 
     private void moveEnemies() {
         double distance = 10.0f;
+        double radius = getDistance2D(groundNode, astronautNode);
         Vector3 astronautPos = astronautNode.getLocalPosition();
         ufoNode1.setLocalPosition(
-                (float) (distance * (astronautPos.x() / getDistance(groundNode, astronautNode))),
+                (float) (distance * (astronautPos.x() / radius)),
                 0.0f,
-                (float) (distance * (astronautPos.z() / getDistance(groundNode, astronautNode)))
+                (float) (distance * (astronautPos.z() / radius))
         );
         ufoNode1.lookAt(astronautSkeleton.getParentNode());
     }
@@ -325,11 +319,12 @@ public class MyGame extends VariableFrameRateGame {
         MoveForwardAction moveForwardAction = new MoveForwardAction(astronautNode, occ, mm);
         MoveBackwardAction moveBackwardAction = new MoveBackwardAction(astronautNode, occ, mm);
         MoveRightAction moveRightAction = new MoveRightAction   (astronautNode, occ, mm);
-        MoveLeftAction moveLeftAction = new MoveLeftAction      ( astronautNode, occ, mm);
+        MoveLeftAction moveLeftAction = new MoveLeftAction      (astronautNode, occ, mm);
         //Actions
-        ThrowItemAction throwItemAction = new ThrowItemAction   (astronautNode, holdingItem, sm, physicsEngine, sc);
+        ThrowItemAction throwItemAction = new ThrowItemAction   (astronautNode, holdingItem, partsList, physicsEngine, sc);
         GameQuitAction gameQuitAction = new GameQuitAction(this);
         BuildAction buildAction = new BuildAction(this,holdingItem,builder,1000);
+        ToggleMovementAction toggleMovementAction = new ToggleMovementAction(followGround, astronautNode);
 
         for (Controller c : controllers) {
             occ.setupInput(im,c);
@@ -368,6 +363,12 @@ public class MyGame extends VariableFrameRateGame {
                         c,
                         Component.Identifier.Key.ESCAPE,
                         gameQuitAction,
+                        InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY
+                );
+                im.associateAction(
+                        c,
+                        Component.Identifier.Key.P,
+                        toggleMovementAction,
                         InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY
                 );
                 im.associateAction(c,
@@ -427,9 +428,6 @@ public class MyGame extends VariableFrameRateGame {
     @Override
     protected void setupScene(Engine eng, SceneManager sm) throws IOException {
         System.out.println("SetupScene");
-
-        setupNetworking();
-        processNetworking(eng.getElapsedTimeMillis());
 
         this.sm = sm;
         this.eng = eng;
@@ -509,7 +507,10 @@ public class MyGame extends VariableFrameRateGame {
         initPhysicsSystem();
         createPhysicsWorld();
         setupControls(sm);
-//      makeGroundFloor(eng,sm);
+        makeGroundFloor();
+        makeHeightMap();
+        setupNetworking();
+        processNetworking(eng.getElapsedTimeMillis());
     }
 
     private SkeletalEntity rigSkeleton(String name, String... actions) throws IOException {
@@ -679,7 +680,7 @@ public class MyGame extends VariableFrameRateGame {
         lineZN.attachObject(lineZ);
     }
 
-    private SceneNode makeGroundFloor(Engine eng, SceneManager sm) throws IOException {
+    private void makeGroundFloor() throws IOException {
         ManualObject groundFloorObj = sm.createManualObject("groundFloor");
         ManualObjectSection groundFloorSect = groundFloorObj.createManualSection("groundFloorSection");
         groundFloorObj.setGpuShaderProgram(sm.getRenderSystem().getGpuShaderProgram(GpuShaderProgram.Type.RENDERING));
@@ -689,13 +690,14 @@ public class MyGame extends VariableFrameRateGame {
                 -5.0f, 0.0f, -5.0f, -5.0f, 0.0f, 5.0f, 5.0f, 0.0f, -5.0f//tri`2
 
         };
-        int[] indices = new int[]{0, 1, 2, 3, 4, 5};
+
+            int[] indices = new int[]{0, 1, 2, 3, 4, 5};
         groundFloorSect.setVertexBuffer(BufferUtil.directFloatBuffer(vertices));
         groundFloorSect.setIndexBuffer(BufferUtil.directIntBuffer(indices));
         //Texture
         Texture tex = eng.getTextureManager().getAssetByPath("sun.jpeg");
         TextureState texState = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
-        texState.setTexture(tex);
+            texState.setTexture(tex);
 
         FrontFaceState faceState = (FrontFaceState) sm.getRenderSystem().createRenderState(RenderState.Type.FRONT_FACE);
         groundFloorObj.setDataSource(Renderable.DataSource.INDEX_BUFFER);
@@ -706,10 +708,20 @@ public class MyGame extends VariableFrameRateGame {
 
         SceneNode groundFloorNode = sm.getRootSceneNode().createChildSceneNode(groundFloorObj.getName() + "Node");
         groundFloorNode.attachObject(groundFloorObj);
-
         groundFloorNode.moveDown(8f);
         groundFloorNode.scale(10f,10f,10f);
-        return groundFloorNode;
+    }
+
+    private void makeHeightMap() {
+        tesselationEntity = sm.createTessellation("TesselationEntity", 6);
+        SceneNode tesselationNode = sm.getRootSceneNode().createChildSceneNode("TesselationNode");
+
+        tesselationEntity.setSubdivisions(8f);
+        tesselationNode.attachObject(tesselationEntity);
+        tesselationNode.setLocalScale(10, 20, 10);
+        tesselationNode.moveDown(30.0f);
+        tesselationEntity.setHeightMap(eng, "AnotherHeightMap.jpg");
+        tesselationEntity.setTexture(eng, "sun.jpeg");
     }
 
     private ManualObject makeXIndicator(Engine eng, SceneManager sm) throws IOException {
@@ -824,11 +836,15 @@ public class MyGame extends VariableFrameRateGame {
 
     private float randomFloat (int min, int max) { return (rand.nextInt(max) + min) + rand.nextFloat(); }
 
-    private boolean isClose(SceneNode node1, SceneNode node2, double minimum) {
-        return getDistance(node1, node2) <= minimum;
+    private boolean isClose2D(SceneNode node1, SceneNode node2, double minimum) {
+        return getDistance2D(node1, node2) <= minimum;
     }
 
-    private double getDistance(SceneNode node1, SceneNode node2) {
+    private boolean isClose3D(SceneNode node1, SceneNode node2, double minimum) {
+        return getDistance3D(node1, node2) <= minimum;
+    }
+
+    private double getDistance2D(SceneNode node1, SceneNode node2) {
         Vector3 a, b;
         double distance, dx, dz;
         a = node1.getLocalPosition();
@@ -838,6 +854,21 @@ public class MyGame extends VariableFrameRateGame {
         dx *= dx;
         dz *= dz;
         distance = dx + dz;
+        return Math.sqrt(distance);
+    }
+
+    private double getDistance3D(SceneNode node1, SceneNode node2) {
+        Vector3 a, b;
+        double distance, dx, dy, dz;
+        a = node1.getLocalPosition();
+        b = node2.getLocalPosition();
+        dx = a.x() - b.x();
+        dy = a.y() - b.y();
+        dz = a.z() - b.z();
+        dx *= dx;
+        dy *= dy;
+        dz *= dz;
+        distance = dx + dy + dz;
         return Math.sqrt(distance);
     }
 
@@ -884,37 +915,41 @@ public class MyGame extends VariableFrameRateGame {
         isClientConnected = b;
     }
 
-    public Vector3 getPlayerPosition() {
-        SceneNode player1 = sm.getSceneNode("p1DolphinNode");
-        return player1.getWorldPosition();
-    }
+    public Vector3 getPlayerPosition() { return astronautNode.getWorldPosition(); }
 
     public Vector3 getPlayerHeading() {
-        SceneNode player1 = sm.getSceneNode("p1DolphinNode");
-        System.out.println("Get Heading: " + player1.getWorldRotation());
-        System.out.println(player1.getWorldForwardAxis());
-        return player1.getWorldForwardAxis();
+        System.out.println("Get Heading: " + astronautNode.getWorldRotation());
+        System.out.println(astronautNode.getWorldForwardAxis());
+        return astronautNode.getWorldForwardAxis();
     }
 
-    public GhostAvatar createGhostAvatar(UUID uuid, Vector3 position, Vector3 heading) throws IOException {
+    public GhostAvatar createGhostAvatar(UUID uuid, String type, Vector3 position, Vector3 heading) throws IOException {
         //Player
         alone = false;
 
-        Entity dolphinE_2 = sm.createEntity("p2Dolphin" + uuid.toString(), "astronaut.obj");
+        String file = "sphere.obj";
 
-        setAstronautTexture(dolphinE_2);
+        switch(type) {
+            case "astronaut": file = "astronaut.obj"; break;
+            case "ufo": file = "Ufo.obj"; break;
+            case "part": file = "Thruster.obj"; break;
+        }
 
-        SceneNode dolphinN_2 = sm.getRootSceneNode().createChildSceneNode(dolphinE_2.getName() + "Node");
+        Entity ghostEntity = sm.createEntity(type + uuid.toString(), file);
 
-        dolphinE_2.setPrimitive(Primitive.TRIANGLES);
-        dolphinN_2.attachObject(dolphinE_2);
+        if(type.equals("player")) setAstronautTexture(ghostEntity);
 
-        GhostAvatar ghostAvatar = new GhostAvatar(uuid, dolphinN_2, dolphinE_2);
+        SceneNode ghostNode = sm.getRootSceneNode().createChildSceneNode(ghostEntity.getName() + "Node");
+
+        ghostEntity.setPrimitive(Primitive.TRIANGLES);
+        ghostNode.attachObject(ghostEntity);
+
+        GhostAvatar ghostAvatar = new GhostAvatar(uuid, ghostNode, ghostEntity);
         System.out.println("Position:: " + position + "Heading:: " + heading);
         ghostAvatar.setPosition(position);
         ghostAvatar.setHeading(heading);
 
-        System.out.println("Ghost is being created: " + ghostAvatar + " Node:" + dolphinN_2.toString());
+        System.out.println("Ghost is being created: " + ghostAvatar + " Node:" + ghostNode.toString());
 
         return ghostAvatar;
     }
@@ -942,5 +977,19 @@ public class MyGame extends VariableFrameRateGame {
             astronaut.setPrimitive(Primitive.TRIANGLES);
         }
         catch(IOException e) { System.out.println(fileName + " not found."); }
+    }
+
+    private void updateVerticalPosition() {
+        Vector3 worldAvatarPosition = astronautNode.getWorldPosition();
+        Vector3 localAvatarPosition = astronautNode.getLocalPosition();
+        Vector3 newAvatarPosition = Vector3f.createFrom(
+            localAvatarPosition.x(),
+            tesselationEntity.getWorldHeight(
+                worldAvatarPosition.x(),
+                worldAvatarPosition.z()
+            ),
+            localAvatarPosition.z()
+        );
+        astronautNode.setLocalPosition(newAvatarPosition);
     }
 }
