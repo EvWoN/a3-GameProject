@@ -38,7 +38,7 @@ public class ProtocolClient extends GameConnectionClient {
             {
                 if (msgTokens[1].compareTo("success") == 0) {
                     game.setIsConnected(true);
-                    sendCreateMessage("astronaut", game.getPlayerPosition(), game.getPlayerHeading());
+                    sendCreateMessage(id.toString(),"astronaut", game.getPlayerPosition(), game.getPlayerHeading());
                 }
                 if (msgTokens[1].compareTo("failure") == 0) {
                     game.setIsConnected(false);
@@ -66,12 +66,13 @@ public class ProtocolClient extends GameConnectionClient {
                         Float.parseFloat(msgTokens[8]),
                         Float.parseFloat(msgTokens[9]));
                 try {
-                    createGhostAvatar(ghostID, type, ghostPosition, ghostHeading);
+                    if(ghostAvatars.containsKey(ghostID)) updateGhostAvatar(ghostID, ghostPosition, ghostHeading);
+                    else createGhostAvatar(ghostID, type, ghostPosition, ghostHeading);
                 }
                 catch (IOException e) { System.out.println("Error updating ghost avatar"); }
             }
             // receive “create…”
-            // format: create, clientid, type, x, y, z, u, v, n
+            // format: create, itemId, type, x, y, z, u, v, n
             if (msgTokens[0].compareTo("create") == 0)
             {
                 UUID ghostID = UUID.fromString(msgTokens[1]);
@@ -147,18 +148,20 @@ public class ProtocolClient extends GameConnectionClient {
     }
 
     // send create
-    // format: create, localId, x, y, z
-    public void sendCreateMessage(String type, Vector3 pos, Vector3 head) {
+    // format: create, clientId, itemId, type, x, y, z, u, v, n
+    public void sendCreateMessage(String name, String type, Vector3 pos, Vector3 head) {
         try {
-            String message =    "create," +
-                                id.toString() + ","  +
-                                type + "," +
-                                pos.x() + ","  +
-                                pos.y() + ","  +
-                                pos.z() + "," +
-                                head.x() + "," +
-                                head.y() + "," +
-                                head.z() + ",";
+            String message =
+                    "create," +
+                    id.toString() + ","  +
+                    name + "," +
+                    type + "," +
+                    pos.x() + ","  +
+                    pos.y() + ","  +
+                    pos.z() + "," +
+                    head.x() + "," +
+                    head.y() + "," +
+                    head.z() + ",";
             sendPacket(message);
         }
         catch (IOException e) { e.printStackTrace(); }

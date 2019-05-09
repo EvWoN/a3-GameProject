@@ -37,13 +37,14 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
                 }
             }
             // case where server receives a CREATE message
-            // format: create,type,localid,x,y,z
+            // format: create, clientId, itemId, type, x, y, z, u, v, n
             if (msgTokens[0].compareTo("create") == 0) {
                 UUID clientID = UUID.fromString(msgTokens[1]);
-                String type = msgTokens[2];
-                String[] pos = {msgTokens[3], msgTokens[4], msgTokens[5]};
-                String[] head = { msgTokens[6], msgTokens[7], msgTokens[8] };
-                sendCreateMessages(clientID, type, pos, head);
+                UUID itemID = UUID.fromString(msgTokens[2]);
+                String type = msgTokens[3];
+                String[] pos = {msgTokens[4], msgTokens[5], msgTokens[6]};
+                String[] head = { msgTokens[5], msgTokens[8], msgTokens[9] };
+                sendCreateMessages(clientID, itemID, type, pos, head);
                 sendWantsDetailsMessages(clientID);
             }
             // case where server receives a BYE message
@@ -85,10 +86,10 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
     }
 
     // format: create, remoteId, x, y, z, u, v, n
-    public void sendCreateMessages(UUID clientID, String type, String[] position, String[] head) {
+    public void sendCreateMessages(UUID clientID, UUID itemID, String type, String[] position, String[] head) {
         try {
             String message =    "create,"  +
-                                clientID.toString() + "," +
+                                itemID.toString() + "," +
                                 type + "," +
                                 position[0] + "," +
                                 position[1] + "," +

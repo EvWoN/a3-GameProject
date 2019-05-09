@@ -794,8 +794,9 @@ public class MyGame extends VariableFrameRateGame {
     private void makeParts() throws IOException {
         Entity entity;
         SceneNode node;
+        UUID id = UUID.randomUUID();
         ++itemCount;
-        entity = sm.createEntity("PartEntity" + Integer.toString(itemCount), "Thruster.obj");
+        entity = sm.createEntity("part" + id.toString(), "Thruster.obj");
         entity.setPrimitive(Primitive.TRIANGLES);
         node = sm.getRootSceneNode().createChildSceneNode("PartNode" + Integer.toString(itemCount));
         node.attachObject(entity);
@@ -804,6 +805,7 @@ public class MyGame extends VariableFrameRateGame {
         node.setLocalRotation(UP);
 //            sc.addNode(node);
         partsList.add(node);
+        protClient.sendCreateMessage(id.toString(), "part", node.getLocalPosition(), node.getLocalForwardAxis());
     }
 
     private void setRandomPoint(Node node, float minRadius, float maxRadius) {
