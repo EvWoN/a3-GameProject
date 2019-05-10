@@ -1,5 +1,6 @@
 package myGameEngine.Managers;
 
+import myGameEngine.Networking.ProtocolClient;
 import ray.rage.scene.Node;
 import ray.rml.Vector3;
 import ray.rml.Vector3f;
@@ -14,12 +15,14 @@ public class Movement2DManager {
     private Hashtable<Node, List<MovementEvent>> nodeMovementQueueTable = new Hashtable<>();
     private Hashtable<Node, Vector3> nodeDistanceMovedTable = new Hashtable<>();
     private float radiusConstraint;
+    private ProtocolClient client;
 
-    public Movement2DManager(float radiusConstraint){
+    public Movement2DManager(float radiusConstraint, ProtocolClient client){
         this.radiusConstraint = radiusConstraint;
+        this.client = client;
     }
 
-    public void queueMovementEvent(Node nodeToMove,float directionDegree, float distanceValue){
+    public void queueMovementEvent(Node nodeToMove, float directionDegree, float distanceValue){
         getNodeMovementQueue(nodeToMove).add(new MovementEvent(directionDegree,distanceValue));
     }
 
@@ -85,9 +88,12 @@ public class Movement2DManager {
     private boolean move(Node node, Vector3 newPosition){
         if (newPosition.length() <= radiusConstraint) {
             node.setLocalPosition(newPosition);
+            if(client != null) client.sendMoveMessage(newPosition, node.getLocalForwardAxis());
             return true;
         } return false;
     }
+
+    public void setClient(ProtocolClient client) { this.client = client; }
     
     public Hashtable<Node, Vector3> getNodeDistanceMovedTable() {
         return nodeDistanceMovedTable;
