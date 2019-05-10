@@ -323,7 +323,7 @@ public class MyGame extends VariableFrameRateGame {
         //Actions
         ThrowItemAction throwItemAction = new ThrowItemAction   (astronautNode, holdingItem, partsList, physicsEngine, sc);
         GameQuitAction gameQuitAction = new GameQuitAction(this);
-        BuildAction buildAction = new BuildAction(this,holdingItem,builder,1000);
+        BuildAction buildAction = new BuildAction(astronautSkeleton.getParentSceneNode(),holdingItem,builder,1000);
         ToggleMovementAction toggleMovementAction = new ToggleMovementAction(followGround, astronautNode);
 
         for (Controller c : controllers) {
@@ -507,7 +507,7 @@ public class MyGame extends VariableFrameRateGame {
         initPhysicsSystem();
         createPhysicsWorld();
         setupControls(sm);
-        makeGroundFloor();
+//        makeGroundFloor();
         makeHeightMap();
         setupNetworking();
         processNetworking(eng.getElapsedTimeMillis());
@@ -716,11 +716,11 @@ public class MyGame extends VariableFrameRateGame {
         tesselationEntity = sm.createTessellation("TesselationEntity", 6);
         SceneNode tesselationNode = sm.getRootSceneNode().createChildSceneNode("TesselationNode");
 
-        tesselationEntity.setSubdivisions(8f);
+        tesselationEntity.setSubdivisions(25f);
         tesselationNode.attachObject(tesselationEntity);
-        tesselationNode.setLocalScale(10, 20, 10);
-        tesselationNode.moveDown(30.0f);
-        tesselationEntity.setHeightMap(eng, "AnotherHeightMap.jpg");
+        tesselationNode.setLocalScale(50, 100, 50);
+        tesselationNode.moveDown(9.5f);
+        tesselationEntity.setHeightMap(eng, "sunheight.jpeg");
         tesselationEntity.setTexture(eng, "sun.jpeg");
     }
 

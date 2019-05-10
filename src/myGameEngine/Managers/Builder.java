@@ -12,7 +12,7 @@ public class Builder {
     SceneManager sm;
 
     private Node toBuild;
-    Light light;
+    private Light light;
     private int pointsToBuild = 1;
     private int builtPoints;
     float minRange = .2f;
@@ -42,6 +42,10 @@ public class Builder {
             this.pointsToBuild = pointsToBuild;
             light.setDiffuse(getLightColor());
         }
+    }
+    
+    public Node getToBuild() {
+        return toBuild;
     }
     
     public int getPointsToBuild(){
