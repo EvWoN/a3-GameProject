@@ -186,6 +186,7 @@ public class MyGame extends VariableFrameRateGame {
             pickupItems();
             checkItems();
             moveEnemies();
+            System.out.println(totalTime);
             if (Math.round(totalTime / 1000) % 8 == 0) {
                 if (!placed) {
                     try {

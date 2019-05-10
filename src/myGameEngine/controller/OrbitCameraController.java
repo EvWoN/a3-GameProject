@@ -147,10 +147,10 @@ public class OrbitCameraController {
             float rotAmount;
             float strength = evt.getValue()*2;
             if (strength <- 0.2) {
-                rotAmount = strength/(time/2);
+                rotAmount = strength*(time/17);
             } else {
                 if (strength > 0.2) {
-                    rotAmount = strength/(time/2);
+                    rotAmount = strength*(time/17);
                 } else {
                     rotAmount = 0.0f;
                 }
@@ -167,10 +167,10 @@ public class OrbitCameraController {
             float moveInAmount;
             float strength = evt.getValue();
             if (strength < -0.2) {
-                moveInAmount = strength/(time/2);
+                moveInAmount = strength*(time/17);
             } else {
                 if (strength > 0.2) {
-                    moveInAmount = strength/(time/2);
+                    moveInAmount = strength*(time/17);
                 } else {
                     moveInAmount = 0.0f;
                 }
@@ -192,10 +192,10 @@ public class OrbitCameraController {
             float moveUpAmount;
             float strength = evt.getValue()*2;
             if (strength < -0.2) {
-                moveUpAmount = -strength/(time/2);
+                moveUpAmount = -strength*(time/17);
             } else {
                 if (strength > 0.2) {
-                    moveUpAmount = -strength/(time/2);
+                    moveUpAmount = -strength*(time/17);
                 } else {
                     moveUpAmount = 0.0f;
                 }
