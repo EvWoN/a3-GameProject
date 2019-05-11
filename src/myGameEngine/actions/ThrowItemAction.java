@@ -7,7 +7,6 @@ import ray.input.action.AbstractInputAction;
 import ray.physics.PhysicsEngine;
 import ray.physics.PhysicsObject;
 import ray.rage.scene.Node;
-import ray.rage.scene.SceneManager;
 import ray.rage.scene.SceneNode;
 import ray.rml.Matrix3;
 import ray.rml.Vector3;
