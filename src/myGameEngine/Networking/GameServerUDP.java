@@ -80,9 +80,25 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
                 System.out.println("itemId: " + itemID + "\ntoString: " + itemID.toString());
                 sendMoveItemMessages(clientID, itemID, pos, head);
             }
+            if(msgTokens[0].compareTo("anim") == 0){
+                UUID clientID = UUID.fromString(msgTokens[1]);
+                String animationState = msgTokens[2];
+                sendAnimMessage(clientID,animationState);
+            }
         }
     }
-
+    
+    private void sendAnimMessage(UUID clientID, String animationState) {
+        try {
+            String message =    "anim," +
+                    clientID.toString() + "," +
+                    animationState;
+            forwardPacketToAll(message, clientID);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
     public void sendJoinedMessage(UUID clientID, boolean success) { // format: join, success or join, failure
         try {
             String message =    "join," +

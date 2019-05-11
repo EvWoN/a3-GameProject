@@ -1,7 +1,7 @@
 package a3;
 
 import javafx.beans.property.SimpleBooleanProperty;
-import myGameEngine.Managers.Animator;
+import myGameEngine.Managers.AstronautAnimator;
 import myGameEngine.Managers.Builder;
 import myGameEngine.Managers.Movement2DManager;
 import myGameEngine.Networking.GhostAvatar;
@@ -52,6 +52,7 @@ import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.*;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class MyGame extends VariableFrameRateGame {
 
@@ -61,7 +62,7 @@ public class MyGame extends VariableFrameRateGame {
     private InputManager im;
     private SceneManager sm;
     private Movement2DManager mm;
-    private Animator animator;
+    private AstronautAnimator animator;
     private String serverAddress;
     private int serverPort;
     private IGameConnection.ProtocolType serverProtocol;
@@ -82,9 +83,10 @@ public class MyGame extends VariableFrameRateGame {
     private SimpleBooleanProperty host = new SimpleBooleanProperty(false);
     private SimpleBooleanProperty ghostHolding = new SimpleBooleanProperty(false);
 
-    private SceneNode astronautNode, ghostNode, groundNode, ufoNode1, ufoNode2;
+    private SceneNode astronautNode, groundNode, ufoNode1, ufoNode2;
     private Tessellation tesselationEntity;
     private SkeletalEntity astronautSkeleton;
+    private SkeletalEntity otherPlayer;
 
     private ArrayList<SceneNode> partsList;
 
@@ -171,6 +173,7 @@ public class MyGame extends VariableFrameRateGame {
             //isClientConnected = true;
         }
         mm.setClient(protClient);
+        animator.setClient(protClient);
         
         //Bye on shutdown
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -186,7 +189,24 @@ public class MyGame extends VariableFrameRateGame {
         im.update(elapsedTimeMillis);
         totalTime += elapsedTimeMillis;
         occ.updateCameraPosition();
-        astronautSkeleton.update();
+        
+        //Update all skeletons
+        sm.getRootSceneNode().getChildNodes().forEach(new Consumer<Node>() {
+            @Override
+            public void accept(Node node) {
+                if(node instanceof SceneNode){
+                    ((SceneNode) node).getAttachedObjects().forEach(new Consumer<SceneObject>() {
+                        @Override
+                        public void accept(SceneObject sceneObject) {
+                            if(sceneObject instanceof SkeletalEntity){
+                                ((SkeletalEntity) sceneObject).update();
+                            }
+                        }
+                    });
+                }
+            }
+        });
+        
         if(host.get()) {
             updatePhysics();
             pickupItems();
@@ -249,11 +269,12 @@ public class MyGame extends VariableFrameRateGame {
                 holdingItem.set(true);
                 hold = node;
             }
-            if(ghostNode != null && isClose3D(node, ghostNode, 1.0f)) {
-                pickup(node, ghostNode);
-                ghostHolding.set(true);
-                hold = node;
-            }
+            //TODO Dude, this is broke, ghostNode is reassigned with each new avatar which you coded to be parts too.... othe than the first instance, you are essentially checking if parts are close to parts
+//            if(ghostNode != null && isClose3D(node, ghostNode, 1.0f)) {
+//                pickup(node, ghostNode);
+//                ghostHolding.set(true);
+//                hold = node;
+//            }
             if(holdingItem.get() && ghostHolding.get()) break;
         }
         if(hold != null) partsList.remove(hold);
@@ -342,9 +363,9 @@ public class MyGame extends VariableFrameRateGame {
     }
 
     private void setupControls(SceneManager sm) {
-        System.out.println("SetupControls");
+        System.out.println("SetupControls" + protClient);
         mm = new Movement2DManager(8f, protClient);
-        animator = new Animator(astronautSkeleton,mm,"run",.8f,"idle",.4f);
+        animator = new AstronautAnimator(astronautSkeleton,mm, protClient,"run",.8f,"idle",.4f);
         
         im = new GenericInputManager();
         ArrayList<Controller> controllers = im.getControllers();
@@ -483,7 +504,7 @@ public class MyGame extends VariableFrameRateGame {
 
         initControllers(sm);
 
-        astronautSkeleton = rigSkeleton("astronaut", "run", "jump", "idle");
+        astronautSkeleton = rigSkeleton("astronaut","astronaut", "run", "jump", "idle");
         astronautNode = sm.getRootSceneNode().createChildSceneNode("astronautNode");
         astronautNode.attachObject(astronautSkeleton);
         astronautNode.scale(0.3f, 0.3f, 0.3f);
@@ -560,9 +581,9 @@ public class MyGame extends VariableFrameRateGame {
         System.out.println(isClientConnected);
     }
 
-    private SkeletalEntity rigSkeleton(String name, String... actions) throws IOException {
-        Material material = sm.getMaterialManager().getAssetByPath(name.concat(".mtl"));
-        SkeletalEntity skeleton = sm.createSkeletalEntity(name, name.concat("Mesh.rkm"), name.concat("Skeleton.rks"));
+    private SkeletalEntity rigSkeleton(String entityName, String objName, String... actions) throws IOException {
+        Material material = sm.getMaterialManager().getAssetByPath(objName.concat(".mtl"));
+        SkeletalEntity skeleton = sm.createSkeletalEntity(entityName, objName.concat("Mesh.rkm"), objName.concat("Skeleton.rks"));
         for(String action : actions)
             skeleton.loadAnimation(action, action.concat("Action.rka"));
         skeleton.playAnimation("idle",0.4f, SkeletalEntity.EndType.LOOP,0);
@@ -942,6 +963,7 @@ public class MyGame extends VariableFrameRateGame {
                 0.0f);
         ground.setBounciness(0.0f);
         ground.setFriction(100.0f);
+        ground.setFriction(100.0f);
         groundNode.setPhysicsObject(ground);
     }
 
@@ -983,25 +1005,41 @@ public class MyGame extends VariableFrameRateGame {
             case "ufo": file = "Ufo.obj"; break;
             case "part": file = "Thruster.obj"; break;
         }
-
-        Entity ghostEntity = sm.createEntity(type + uuid.toString(), file);
-
-        if(type.equals("astronaut")) setAstronautTexture(ghostEntity);
-
-        ghostNode = sm.getRootSceneNode().createChildSceneNode(ghostEntity.getName() + "Node");
-
-        ghostEntity.setPrimitive(Primitive.TRIANGLES);
-        ghostNode.attachObject(ghostEntity);
-        ghostNode.setLocalScale(scale, scale, scale);
-
-        GhostAvatar ghostAvatar = new GhostAvatar(uuid, ghostNode, ghostEntity);
-        System.out.println("Position:: " + position + "Heading:: " + heading);
-        ghostAvatar.setPosition(position);
-        ghostAvatar.setHeading(heading);
-
-        System.out.println("Ghost is being created: " + ghostAvatar + " Node:" + ghostNode.toString());
-
-        return ghostAvatar;
+        
+        Entity ghostEntity;
+        SceneNode ghostNode;
+        
+        //Astronaut creation
+        if(type.equals("astronaut")) {
+            ghostEntity = rigSkeleton(type + uuid.toString(), "astronaut", "run", "jump", "idle");
+            ghostNode = sm.getRootSceneNode().createChildSceneNode(ghostEntity.getName() + "Node");
+            ghostNode.attachObject(ghostEntity);
+            ghostNode.scale(0.3f, 0.3f, 0.3f);
+            ghostNode.setLocalRotation(UP);
+            setAstronautTexture(ghostEntity);
+        } else {
+            ghostEntity = sm.createEntity(type + uuid.toString(), file);
+            ghostNode = sm.getRootSceneNode().createChildSceneNode(ghostEntity.getName() + "Node");
+            ghostEntity.setPrimitive(Primitive.TRIANGLES);
+            ghostNode.attachObject(ghostEntity);
+            ghostNode.setLocalScale(scale, scale, scale);
+        }
+        
+            GhostAvatar ghostAvatar = new GhostAvatar(uuid, ghostNode, ghostEntity);
+            System.out.println("Position:: " + position + "Heading:: " + heading);
+            ghostAvatar.setPosition(position);
+            ghostAvatar.setHeading(heading);
+            
+            if(type.equals("astronaut")){
+                AstronautAnimator animatorBean = new AstronautAnimator((SkeletalEntity) ghostEntity, "run", .8f, "idle", .4f);
+                ghostAvatar.setBean(animatorBean);
+                System.out.println("Playing idle animation");
+                animatorBean.playIdleAnimation();
+            }
+        
+            System.out.println("Ghost is being created: " + ghostAvatar + " Node:" + ghostNode.toString());
+        
+            return ghostAvatar;
     }
 
     public boolean updateGhostAvatar(GhostAvatar avatar, Vector3 position, Vector3 heading){
@@ -1041,5 +1079,20 @@ public class MyGame extends VariableFrameRateGame {
             localAvatarPosition.z()
         );
         astronautNode.setLocalPosition(newAvatarPosition);
+    }
+    
+    public void updateGhostAvatarAnim(GhostAvatar ghostAvatar, String animState) {
+        Entity entity = ghostAvatar.getEntity();
+        if (entity instanceof SkeletalEntity) {
+            AstronautAnimator aaBean = (AstronautAnimator) ghostAvatar.getBean();
+            switch(animState){
+                case "run": aaBean.playMoveAnimation();
+                    break;
+                case "idle": aaBean.playIdleAnimation();
+                    break;
+            }
+        } else {
+            System.err.println("Received animation state for for a non-skeletalEntity: " + ghostAvatar.getNode());
+        }
     }
 }

@@ -69,7 +69,7 @@ public class ProtocolClient extends GameConnectionClient {
                     if(ghostAvatars.containsKey(ghostID)) updateGhostAvatar(ghostID, ghostPosition, ghostHeading);
                     else createGhostAvatar(ghostID, type, ghostPosition, ghostHeading);
                 }
-                catch (IOException e) { System.out.println("Error updating ghost avatar"); }
+                catch (IOException e) { System.out.println("Error creating/updating ghost avatar: " + e.getMessage()); }
             }
             // receive “create…”
             // format: create, itemId, type, x, y, z, u, v, n
@@ -111,6 +111,14 @@ public class ProtocolClient extends GameConnectionClient {
                 try { updateGhostAvatar(ghostID, ghostPosition, ghostHeading); }
                 catch (IOException e) { System.out.println("Error updating move ghost avatar"); }
             }
+            //rec. "anim..."
+            //formats: anim, clientid, x, y, z,
+            if (msgTokens[0].compareTo("anim") == 0) {
+                UUID ghostID = UUID.fromString(msgTokens[1]);
+                String animState = msgTokens[2];
+                try { updateGhostAvatar(ghostID, animState); }
+                catch (Exception e) { System.out.println("Error updating animation ghost avatar"); }
+            }
         }
     }
 
@@ -127,6 +135,16 @@ public class ProtocolClient extends GameConnectionClient {
         System.out.println("Ghost Received: " + ghostID + "\nHashtable on ghost update: " + ghostAvatars);
         GhostAvatar ghostAvatar = ghostAvatars.get(ghostID);
         game.updateGhostAvatar(ghostAvatar, ghostPosition, ghostHeading);
+    }
+    
+    /**
+     * Update ghosts animation state
+     * @param ghostID avatar id
+     * @param animState animation action identifiers such as "idle" or "run"
+     */
+    private void updateGhostAvatar(UUID ghostID, String animState) {
+        GhostAvatar ghostAvatar = ghostAvatars.get(ghostID);
+        game.updateGhostAvatarAnim(ghostAvatar,animState);
     }
 
     private void removeGhostAvatar(UUID ghostID) throws IOException {
@@ -233,5 +251,17 @@ public class ProtocolClient extends GameConnectionClient {
     public void sendPacket(Serializable object) throws IOException {
         //System.out.println("SendingPackage: " + object);
         super.sendPacket(object);
+    }
+    
+    public void sendAnimMessage(String onMove) {
+        System.out.println("Sending animation message");
+        try {
+            String message =
+                    "anim," +
+                            id.toString() + ","  +
+                            onMove + ",";
+            sendPacket(message);
+        }
+        catch (IOException e) { e.printStackTrace(); }
     }
 }

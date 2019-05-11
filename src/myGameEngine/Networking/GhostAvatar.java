@@ -10,6 +10,7 @@ public class GhostAvatar {
     private UUID id;
     private SceneNode node;
     private Entity entity;
+    private Object bean;
 
     public GhostAvatar(UUID id, SceneNode node, Entity entity) {
         this.id = id;
@@ -66,5 +67,21 @@ public class GhostAvatar {
     @Override
     public String toString() {
         return "Obj: Ghost Avatar of UUID: " + id;
+    }
+    
+    /**
+     * Get an attached reference
+     * @return a reference to any object associated with this GhostAvatar. Caller is responsible for knowing what type of reference object is expected.
+     */
+    public Object getBean() {
+        return bean;
+    }
+    
+    /**
+     * Attach any reference you want to this GhostAvatar
+     * @param bean a reference to any object. Caller for the getter will be responsible for knowing what reference object is expected from this ghost.
+     */
+    public void setBean(Object bean) {
+        this.bean = bean;
     }
 }
