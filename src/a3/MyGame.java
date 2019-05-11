@@ -320,12 +320,21 @@ public class MyGame extends VariableFrameRateGame {
     @Override
     protected void setupWindow(RenderSystem rs, GraphicsEnvironment ge) {
         System.out.println("SetupWindow");
+        
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        double screenPortion = 0.60; //mitigate taskbar in windowed mode
+        int width = (int) (screenSize.width * screenPortion);
+        int height = (int) (screenSize.height * screenPortion);
+        rs.createRenderWindow(new DisplayMode(width, height, 24, 60), false);
+        
+        /** Display modeSelect
         DisplaySettingsDialog settingsDialog = new DisplaySettingsDialog(ge.getDefaultScreenDevice());
         settingsDialog.showIt();
         DisplayMode selectedDisplayMode = settingsDialog.getSelectedDisplayMode();
         if (selectedDisplayMode != null) {
             rs.createRenderWindow(selectedDisplayMode,settingsDialog.isFullScreenModeSelected());
         } else this.exit();
+         */
     }
 
     private void setupControls(SceneManager sm) {
