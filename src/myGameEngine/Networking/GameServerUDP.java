@@ -3,13 +3,20 @@ package myGameEngine.Networking;
 import myGameEngine.Enemy;
 import ray.networking.server.GameConnectionServer;
 import ray.networking.server.IClientInfo;
+import ray.rage.Engine;
 import ray.rage.game.Game;
 import ray.rml.Vector3;
 
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineFactory;
+import javax.script.ScriptEngineManager;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 
@@ -18,13 +25,34 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
     private HashMap<UUID, Vector3> lastKnownPositions;
     private HashMap<UUID, Enemy> enemyList;
 
+    private Random rand;
+    private ScriptEngine se;
+
     private float elapsedTime;
 
     public GameServerUDP(int localPort) throws IOException {
         super(localPort, ProtocolType.UDP);
         lastKnownPositions = new HashMap<>();
         elapsedTime = 0;
+        rand = new Random();
+        runScript();
         System.out.println("Local IP: " + InetAddress.getLocalHost() + " Port: " +localPort);
+    }
+
+    private void runScript() {
+        ScriptEngineManager factory = new ScriptEngineManager();
+        String scriptName = "Parameters.js";
+
+        List<ScriptEngineFactory> list = factory.getEngineFactories();
+
+        se = factory.getEngineByName("js");
+
+        try {
+            FileReader fr = new FileReader(scriptName);
+            se.eval(fr);
+            fr.close();
+        }
+        catch (Exception e) { e.printStackTrace(); }
     }
 
     public static void main(String[] args) {
@@ -38,6 +66,16 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
     }
 
     private void update() {
+        enemyList.put(
+                UUID.randomUUID(),
+                new Enemy(
+                        UUID.randomUUID(),
+                        rand.nextInt(360) + rand.nextFloat(),
+                        (Integer) se.get("ammo"),
+                        ((Double) se.get("orbit")).floatValue(),
+                        ((Double) se.get("speed")).floatValue()
+                )
+        );
         enemyList.forEach(new BiConsumer<UUID, Enemy>() {
             @Override
             public void accept(UUID uuid, Enemy enemy) {
