@@ -313,9 +313,11 @@ public class MyGame extends VariableFrameRateGame {
 
     private void moveEnemies() {
         double distance = 10.0f;
+        double speed = 1.0f;
         double radius = getDistance2D(groundNode, astronautNode);
+        double angleToDestination = (180f * speed) / (Math.PI * distance);
         Vector3 astronautPos = astronautNode.getLocalPosition();
-        ufoNode1.setLocalPosition(
+        Vector3 destination = Vector3f.createFrom(
                 (float) (distance * (astronautPos.x() / radius)),
                 0.0f,
                 (float) (distance * (astronautPos.z() / radius))

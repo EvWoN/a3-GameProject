@@ -1,17 +1,49 @@
 package myGameEngine.Networking;
 
+import myGameEngine.Enemy;
 import ray.networking.server.GameConnectionServer;
 import ray.networking.server.IClientInfo;
+import ray.rage.game.Game;
+import ray.rml.Vector3;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetAddress;
+import java.util.HashMap;
 import java.util.UUID;
+import java.util.function.BiConsumer;
 
 public class GameServerUDP extends GameConnectionServer<UUID> {
+
+    private HashMap<UUID, Vector3> lastKnownPositions;
+    private HashMap<UUID, Enemy> enemyList;
+
+    private float elapsedTime;
+
     public GameServerUDP(int localPort) throws IOException {
         super(localPort, ProtocolType.UDP);
+        lastKnownPositions = new HashMap<>();
+        elapsedTime = 0;
         System.out.println("Local IP: " + InetAddress.getLocalHost() + " Port: " +localPort);
+    }
+
+    public static void main(String[] args) {
+        try {
+            GameServerUDP server = new GameServerUDP(Integer.getInteger(args[0]));
+            while(true) {
+                server.update();
+            }
+        }
+        catch (IOException e) { e.printStackTrace(); }
+    }
+
+    private void update() {
+        enemyList.forEach(new BiConsumer<UUID, Enemy>() {
+            @Override
+            public void accept(UUID uuid, Enemy enemy) {
+                enemy.update
+            }
+        });
     }
 
     @Override
@@ -40,10 +72,10 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
             // format: create, clientId, itemId, type, x, y, z, u, v, n
             if (msgTokens[0].compareTo("create") == 0) {
                 UUID clientID = UUID.fromString(msgTokens[1]);
-                UUID itemID = UUID.fromString(msgTokens[2]);
-                String type = msgTokens[3];
-                String[] pos = {msgTokens[4], msgTokens[5], msgTokens[6]};
-                String[] head = { msgTokens[5], msgTokens[8], msgTokens[9] };
+                String[] pos = {msgTokens[2], msgTokens[3], msgTokens[4]};
+                String[] head = { msgTokens[5], msgTokens[6], msgTokens[7] };
+                if(lastKnownPositions.containsKey(clientID))
+                    lastKnownPositions.put(it)
                 sendCreateMessages(clientID, itemID, type, pos, head);
                 sendWantsDetailsMessages(clientID);
             }
