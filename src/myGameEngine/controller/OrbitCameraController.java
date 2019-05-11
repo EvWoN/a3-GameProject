@@ -22,9 +22,11 @@ public class OrbitCameraController {
     private Vector3 cameraFocus;
     private float cameraAzimuth;//rotation of camera around Y axis
     private float cameraElevation;//elevation of camera above targets
-    private float minElev = 5f, maxElev = 80f;//Elevation constraints in deg
+//    private float minElev = 5f, maxElev = 80f;//Elevation constraints in deg
+    private float minElev = -40f, maxElev = 80f;//Elevation constraints in deg
     private float radius;//distance between camera and targets
-    private float minRad = 10f, maxRad = 17f;//radius constraints
+//    private float minRad = 10f, maxRad = 17f;//radius constraints
+    private float minRad = 2f, maxRad = 50f;//radius constraints=
     private Vector3 targetPos;//targets’s position in the world
     private Vector3 worldUpVec;
     
@@ -145,10 +147,10 @@ public class OrbitCameraController {
             float rotAmount;
             float strength = evt.getValue()*2;
             if (strength <- 0.2) {
-                rotAmount = strength/(time/2);
+                rotAmount = strength*(time/17);
             } else {
                 if (strength > 0.2) {
-                    rotAmount = strength/(time/2);
+                    rotAmount = strength*(time/17);
                 } else {
                     rotAmount = 0.0f;
                 }
@@ -165,15 +167,15 @@ public class OrbitCameraController {
             float moveInAmount;
             float strength = evt.getValue();
             if (strength < -0.2) {
-                moveInAmount = strength/(time/2);
+                moveInAmount = strength*(time/17);
             } else {
                 if (strength > 0.2) {
-                    moveInAmount = strength/(time/2);
+                    moveInAmount = strength*(time/17);
                 } else {
                     moveInAmount = 0.0f;
                 }
             }
-            float newRad = radius + moveInAmount/20;
+            float newRad = radius + moveInAmount/10;
             //Checking zoom values
             if(minRad > newRad){
                 radius = minRad;
@@ -190,10 +192,10 @@ public class OrbitCameraController {
             float moveUpAmount;
             float strength = evt.getValue()*2;
             if (strength < -0.2) {
-                moveUpAmount = -strength/(time/2);
+                moveUpAmount = -strength*(time/17);
             } else {
                 if (strength > 0.2) {
-                    moveUpAmount = -strength/(time/2);
+                    moveUpAmount = -strength*(time/17);
                 } else {
                     moveUpAmount = 0.0f;
                 }
