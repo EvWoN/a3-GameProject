@@ -79,8 +79,9 @@ public class MyGame extends VariableFrameRateGame {
     private SimpleBooleanProperty holdingItem = new SimpleBooleanProperty(false);
     private SimpleBooleanProperty followGround = new SimpleBooleanProperty(false);
     private SimpleBooleanProperty host = new SimpleBooleanProperty(false);
+    private SimpleBooleanProperty ghostHolding = new SimpleBooleanProperty(false);
 
-    private SceneNode astronautNode, groundNode, ufoNode1, ufoNode2;
+    private SceneNode astronautNode, ghostNode, groundNode, ufoNode1, ufoNode2;
     private Tessellation tesselationEntity;
     private SkeletalEntity astronautSkeleton;
 
@@ -211,9 +212,16 @@ public class MyGame extends VariableFrameRateGame {
         Matrix4 mat;
         physicsEngine.update(time);
         for(SceneNode node : eng.getSceneManager().getSceneNodes()) {
+            if(node.getName().equals("GroundNode")) continue;
             if(node.getPhysicsObject() != null) {
                 mat = Matrix4f.createFrom(toFloatArray(node.getPhysicsObject().getTransform()));
                 node.setLocalPosition(mat.value(0, 3), mat.value(1, 3), mat.value(2, 3));
+                protClient.sendMoveItemMessage(
+                        node.getName().substring("PartNode".length() + 1),
+                        node.getLocalPosition(),
+                        node.getLocalForwardAxis()
+                );
+                System.out.println("Sending MoveItem: " + node.getName().substring("PartNode".length() + 1));
             }
         }
     }
@@ -222,18 +230,40 @@ public class MyGame extends VariableFrameRateGame {
         if (holdingItem.getValue()) return;
         SceneNode hold = null;
         for(SceneNode node : partsList){
-            if(isClose3D(node, astronautNode, 1.0f)) {
+            if (isClose3D(node, astronautNode, 1.0f)) {
+                /*
                 holdingItem.set(true);
                 node.setPhysicsObject(null);
                 node.getParent().detachChild(node);
                 astronautNode.attachChild(node);
                 node.setLocalRotation(astronautNode.getLocalRotation());
                 node.setLocalPosition(0.0f, 5.0f, 0.0f);
+                */
+                pickup(node, astronautNode);
+                holdingItem.set(true);
                 hold = node;
-                break;
             }
+            if(ghostNode != null && isClose3D(node, ghostNode, 1.0f)) {
+                pickup(node, ghostNode);
+                ghostHolding.set(true);
+                hold = node;
+            }
+            if(holdingItem.get() && ghostHolding.get()) break;
         }
         if(hold != null) partsList.remove(hold);
+    }
+
+    private void pickup(SceneNode item, SceneNode thrower) {
+        String id = item.getName().substring("PartNode".length() + 1);
+        astronautNode.setPhysicsObject(null);
+        item.getParent().detachChild(item);
+        thrower.attachChild(item);
+        item.setLocalRotation(thrower.getLocalRotation());
+        item.setLocalPosition(0.0f, 5.0f, 0.0f);
+        /*System.out.println(
+                "\nSending message: move " + id +
+                "\nFor object: " + item.getName() + "\n");
+        protClient.sendMoveItemMessage(id, item.getLocalPosition(), item.getLocalForwardAxis());*/
     }
 
     private void checkItems() {
@@ -246,7 +276,6 @@ public class MyGame extends VariableFrameRateGame {
             if(node.getPhysicsObject() != null && !node.getName().startsWith("Ground"))
                 if(!isClose2D((SceneNode) node, groundNode, 8.0f)) toBeRemoved.add(node);
         }
-
         nodeIterator = toBeRemoved.iterator();
         while(nodeIterator.hasNext()) {
             node = nodeIterator.next();
@@ -798,14 +827,13 @@ public class MyGame extends VariableFrameRateGame {
         ++itemCount;
         entity = sm.createEntity("part" + id.toString(), "Thruster.obj");
         entity.setPrimitive(Primitive.TRIANGLES);
-        node = sm.getRootSceneNode().createChildSceneNode("PartNode" + Integer.toString(itemCount));
+        node = sm.getRootSceneNode().createChildSceneNode("PartNode" + id.toString());
         node.attachObject(entity);
         setRandomPoint(node, 0.0f, 8.0f);
         node.setLocalScale(.25f, .25f, .25f);
         node.setLocalRotation(UP);
 //            sc.addNode(node);
         partsList.add(node);
-        protClient.sendCreateMessage(id.toString(), "part", node.getLocalPosition(), node.getLocalForwardAxis());
     }
 
     private void setRandomPoint(Node node, float minRadius, float maxRadius) {
@@ -912,6 +940,7 @@ public class MyGame extends VariableFrameRateGame {
         alone = false;
 
         String file = "sphere.obj";
+        float scale = type.equals("part") ? .25f : 1.2f;
 
         switch(type) {
             case "astronaut": file = "astronaut.obj"; break;
@@ -923,10 +952,11 @@ public class MyGame extends VariableFrameRateGame {
 
         if(type.equals("astronaut")) setAstronautTexture(ghostEntity);
 
-        SceneNode ghostNode = sm.getRootSceneNode().createChildSceneNode(ghostEntity.getName() + "Node");
+        ghostNode = sm.getRootSceneNode().createChildSceneNode(ghostEntity.getName() + "Node");
 
         ghostEntity.setPrimitive(Primitive.TRIANGLES);
         ghostNode.attachObject(ghostEntity);
+        ghostNode.setLocalScale(scale, scale, scale);
 
         GhostAvatar ghostAvatar = new GhostAvatar(uuid, ghostNode, ghostEntity);
         System.out.println("Position:: " + position + "Heading:: " + heading);

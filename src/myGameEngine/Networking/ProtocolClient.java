@@ -195,6 +195,24 @@ public class ProtocolClient extends GameConnectionClient {
         catch (IOException e) { e.printStackTrace(); }
     }
 
+    public void sendMoveItemMessage(String itemId, Vector3 pos, Vector3 head) {
+        try {
+            String message =
+                    "moveItem," +
+                    id.toString() + "," +
+                    itemId + "," +
+                    pos.x() + "," +
+                    pos.y() + "," +
+                    pos.z() + "," +
+                    head.x() + "," +
+                    head.y() + "," +
+                    head.z() + ",";
+            sendPacket(message);
+            System.out.println(message);
+        }
+        catch(IOException e) { e.printStackTrace(); }
+    }
+
     public void sendMoveMessage(Vector3 pos, Vector3 head) {
         try {
             String message =    "move," +

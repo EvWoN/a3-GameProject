@@ -72,6 +72,14 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
                 String[] head = { msgTokens[5], msgTokens[6], msgTokens[7] };
                 sendMoveMessages(clientID, pos, head);
             }
+            if (msgTokens[0].compareTo("moveItem") == 0) {
+                UUID clientID = UUID.fromString(msgTokens[1]);
+                UUID itemID = UUID.fromString(msgTokens[2]);
+                String[] pos = { msgTokens[3], msgTokens[4], msgTokens[5] };
+                String[] head = { msgTokens[6], msgTokens[7], msgTokens[8] };
+                System.out.println("itemId: " + itemID + "\ntoString: " + itemID.toString());
+                sendMoveItemMessages(clientID, itemID, pos, head);
+            }
         }
     }
 
@@ -153,6 +161,24 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
                                 head[0] + "," +
                                 head[1] + "," +
                                 head[2];
+            forwardPacketToAll(message, clientID);
+
+        }
+        catch (IOException e) { e.printStackTrace(); }
+    }
+
+    public void sendMoveItemMessages(UUID clientID, UUID itemID, String[] position, String[] head) {
+        try {
+            String message =
+                    "move," +
+                    itemID.toString() + "," +
+                    position[0] + "," +
+                    position[1] + "," +
+                    position[2] + "," +
+                    head[0] + "," +
+                    head[1] + "," +
+                    head[2];
+            System.out.println(message);
             forwardPacketToAll(message, clientID);
         }
         catch (IOException e) { e.printStackTrace(); }
