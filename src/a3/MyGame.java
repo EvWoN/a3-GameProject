@@ -146,7 +146,7 @@ public class MyGame extends VariableFrameRateGame {
             game.exit();
         }
     }
-
+    
     private void setupNetworking() {
         gameObjectsToRemove = new LinkedList<UUID>();
         isClientConnected = false;
@@ -171,6 +171,11 @@ public class MyGame extends VariableFrameRateGame {
             //isClientConnected = true;
         }
         mm.setClient(protClient);
+        
+        //Bye on shutdown
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            protClient.sendByeMessage();
+        }));
     }
 
     @Override
@@ -761,7 +766,7 @@ public class MyGame extends VariableFrameRateGame {
 
         tesselationEntity.setSubdivisions(25f);
         tesselationNode.attachObject(tesselationEntity);
-        tesselationNode.setLocalScale(50, 100, 50);
+        tesselationNode.setLocalScale(100, 100, 100);
         tesselationNode.moveDown(9.5f);
         tesselationEntity.setHeightMap(eng, "sunheight.jpeg");
         tesselationEntity.setTexture(eng, "sun.jpeg");
