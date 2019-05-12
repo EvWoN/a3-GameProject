@@ -301,7 +301,7 @@ public class MyGame extends VariableFrameRateGame {
         {
             node = nodeIterator.next();
             if(node.getPhysicsObject() != null && !node.getName().startsWith("Ground"))
-                if(!isClose2D((SceneNode) node, groundNode, 8.0f)) toBeRemoved.add(node);
+                if(!isClose3D((SceneNode) node, groundNode, 10.0f)) toBeRemoved.add(node);
         }
         nodeIterator = toBeRemoved.iterator();
         while(nodeIterator.hasNext()) {
@@ -956,13 +956,15 @@ public class MyGame extends VariableFrameRateGame {
         float[] up = { 0.0f, 1.0f, 0.0f };
         double[] temptf;
         PhysicsObject ballObject;
-
+        //radius, height, width
+        float[] halfExtends = {9f,0f,9f};
+//        groundNode.moveDown();
         temptf = toDoubleArray(groundNode.getLocalTransform().toFloatArray());
-        ground = physicsEngine.addStaticPlaneObject(
+        ground = physicsEngine.addCylinderObject(
                 physicsEngine.nextUID(),
+                0f,
                 temptf,
-                up,
-                0.0f);
+                halfExtends);
         ground.setBounciness(0.0f);
         ground.setFriction(100.0f);
         ground.setFriction(100.0f);

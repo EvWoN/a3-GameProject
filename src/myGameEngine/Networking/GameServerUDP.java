@@ -3,23 +3,18 @@ package myGameEngine.Networking;
 import myGameEngine.Enemy;
 import ray.networking.server.GameConnectionServer;
 import ray.networking.server.IClientInfo;
-import ray.rage.Engine;
-import ray.rage.game.Game;
 import ray.rml.Vector3;
 import ray.rml.Vector3f;
 
 import javax.script.ScriptEngine;
-import javax.script.ScriptEngineFactory;
 import javax.script.ScriptEngineManager;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Random;
 import java.util.UUID;
-import java.util.function.BiConsumer;
 
 public class GameServerUDP extends GameConnectionServer<UUID> {
 
