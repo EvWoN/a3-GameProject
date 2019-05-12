@@ -20,13 +20,16 @@ public class Enemy {
 
     private final float ORBIT;
     private final float SPEED;
+    private final float START;
 
-    public Enemy(UUID target, float angle, int ammo, float orbit, float speed) {
+    public Enemy(UUID target, float angle, int ammo, float orbit, float speed, float start) {
         this.target = target;
         this.angle = angle;
         this.ammo = ammo;
         this.ORBIT = orbit;
         this.SPEED = speed;
+        this.START = start;
+        this.location = calcPos(angle, START);
         this.orbitDest = calcPos(angle, ORBIT);
     }
 
