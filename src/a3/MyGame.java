@@ -1,6 +1,8 @@
 package a3;
 
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import myGameEngine.Managers.AstronautAnimator;
 import myGameEngine.Managers.Movement2DManager;
 import myGameEngine.Networking.GhostAvatar;
@@ -203,6 +205,10 @@ public class MyGame extends VariableFrameRateGame {
                 }
             }
         });
+    
+        if (followGround.getValue()) {
+            updateVerticalPosition();
+        }
         
         if(host.get()) {
             updatePhysics();
@@ -298,7 +304,7 @@ public class MyGame extends VariableFrameRateGame {
         {
             node = nodeIterator.next();
             if(node.getPhysicsObject() != null && !node.getName().startsWith("Ground"))
-                if(!isClose3D((SceneNode) node, groundNode, 10.0f)) toBeRemoved.add(node);
+                if(!isClose3D((SceneNode) node, groundNode, 14.0f)) toBeRemoved.add(node);
         }
         nodeIterator = toBeRemoved.iterator();
         while(nodeIterator.hasNext()) {
@@ -363,8 +369,25 @@ public class MyGame extends VariableFrameRateGame {
 
     private void setupControls(SceneManager sm) {
         System.out.println("SetupControls" + protClient);
-        mm = new Movement2DManager(8f, protClient);
+    
+        float radiusConstraint = 8f;
+        mm = new Movement2DManager(radiusConstraint, protClient);
         animator = new AstronautAnimator(astronautSkeleton,mm, protClient,"run",.8f,"idle",.4f);
+        
+        //Sets up camera, movement distance restriction, and as a result of change update will call verticalUpdate
+        followGround.addListener(new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+                if(newValue){
+                    mm.setRadiusConstraint(30f);
+                    occ.removeTarget(groundNode);
+                    astronautNode.moveLeft(14f);
+                } else {
+                    occ.addTarget(groundNode);
+                    mm.setRadiusConstraint(radiusConstraint);
+                }
+            }
+        });
         
         im = new GenericInputManager();
         ArrayList<Controller> controllers = im.getControllers();
@@ -385,6 +408,7 @@ public class MyGame extends VariableFrameRateGame {
         GameQuitAction gameQuitAction = new GameQuitAction(this);
         ToggleMovementAction toggleMovementAction = new ToggleMovementAction(followGround, astronautNode);
         ToggleHostAction toggleHostAction = new ToggleHostAction(host);
+        
 
         for (Controller c : controllers) {
             occ.setupInput(im,c);
