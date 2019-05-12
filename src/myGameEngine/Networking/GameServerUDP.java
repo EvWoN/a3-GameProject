@@ -3,13 +3,21 @@ package myGameEngine.Networking;
 import myGameEngine.Enemy;
 import ray.networking.server.GameConnectionServer;
 import ray.networking.server.IClientInfo;
+import ray.rage.Engine;
 import ray.rage.game.Game;
 import ray.rml.Vector3;
+import ray.rml.Vector3f;
 
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineFactory;
+import javax.script.ScriptEngineManager;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 
@@ -18,13 +26,40 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
     private HashMap<UUID, Vector3> lastKnownPositions;
     private HashMap<UUID, Enemy> enemyList;
 
-    private float elapsedTime;
+    private Random rand;
+    private ScriptEngine se;
+
+    private long totalTime, elapsedTime, lastTime, timeSec;
+
+    private int SPAWNRATE, UPDATESCRIPT;
 
     public GameServerUDP(int localPort) throws IOException {
         super(localPort, ProtocolType.UDP);
         lastKnownPositions = new HashMap<>();
-        elapsedTime = 0;
+        rand = new Random();
+        lastTime = System.currentTimeMillis();
+        totalTime = 0;
+        runScript();
+        setConstants();
         System.out.println("Local IP: " + InetAddress.getLocalHost() + " Port: " +localPort);
+    }
+
+    private void runScript() {
+        ScriptEngineManager factory = new ScriptEngineManager();
+        String scriptName = "Parameters.js";
+
+        se = factory.getEngineByName("js");
+
+        try {
+            FileReader fr = new FileReader(scriptName);
+            se.eval(fr);
+            fr.close();
+        }
+        catch (Exception e) { e.printStackTrace(); }
+    }
+
+    private void setConstants() {
+        SPAWNRATE = (Integer) se.get("spawnrate");
     }
 
     public static void main(String[] args) {
@@ -38,11 +73,24 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
     }
 
     private void update() {
-        enemyList.forEach(new BiConsumer<UUID, Enemy>() {
-            @Override
-            public void accept(UUID uuid, Enemy enemy) {
-                enemy.update
-            }
+        elapsedTime = System.currentTimeMillis() - lastTime;
+        totalTime += elapsedTime;
+        timeSec = totalTime / 1000;
+        lastTime = System.currentTimeMillis();
+        if (timeSec % UPDATESCRIPT == 0) runScript();
+        if (timeSec % SPAWNRATE == 0) enemyList.put(
+                UUID.randomUUID(),
+                new Enemy(
+                        UUID.randomUUID(),
+                        rand.nextInt(360) + rand.nextFloat(),
+                        (Integer) se.get("ammo"),
+                        ((Double) se.get("orbit")).floatValue(),
+                        ((Double) se.get("speed")).floatValue()
+                )
+        );
+        enemyList.forEach((uuid, enemy) -> {
+            enemy.updateDestination(lastKnownPositions.get(uuid));
+            enemy.move();
         });
     }
 
@@ -72,10 +120,19 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
             // format: create, clientId, itemId, type, x, y, z, u, v, n
             if (msgTokens[0].compareTo("create") == 0) {
                 UUID clientID = UUID.fromString(msgTokens[1]);
-                String[] pos = {msgTokens[2], msgTokens[3], msgTokens[4]};
-                String[] head = { msgTokens[5], msgTokens[6], msgTokens[7] };
+                UUID itemID = UUID.fromString(msgTokens[2]);
+                String type = msgTokens[3];
+                String[] pos = {msgTokens[4], msgTokens[5], msgTokens[6]};
+                String[] head = { msgTokens[7], msgTokens[8], msgTokens[9] };
                 if(lastKnownPositions.containsKey(clientID))
-                    lastKnownPositions.put(it)
+                    lastKnownPositions.put(
+                            clientID,
+                            Vector3f.createFrom(
+                                    Float.parseFloat(msgTokens[2]),
+                                    Float.parseFloat(msgTokens[3]),
+                                    Float.parseFloat(msgTokens[4])
+                            )
+                    );
                 sendCreateMessages(clientID, itemID, type, pos, head);
                 sendWantsDetailsMessages(clientID);
             }
