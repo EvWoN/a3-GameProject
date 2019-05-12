@@ -6,6 +6,7 @@ import ray.networking.server.IClientInfo;
 import ray.rage.Engine;
 import ray.rage.game.Game;
 import ray.rml.Vector3;
+import ray.rml.Vector3f;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineFactory;
@@ -28,22 +29,24 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
     private Random rand;
     private ScriptEngine se;
 
-    private float elapsedTime;
+    private long totalTime, elapsedTime, lastTime, timeSec;
+
+    private int SPAWNRATE, UPDATESCRIPT;
 
     public GameServerUDP(int localPort) throws IOException {
         super(localPort, ProtocolType.UDP);
         lastKnownPositions = new HashMap<>();
-        elapsedTime = 0;
         rand = new Random();
+        lastTime = System.currentTimeMillis();
+        totalTime = 0;
         runScript();
+        setConstants();
         System.out.println("Local IP: " + InetAddress.getLocalHost() + " Port: " +localPort);
     }
 
     private void runScript() {
         ScriptEngineManager factory = new ScriptEngineManager();
         String scriptName = "Parameters.js";
-
-        List<ScriptEngineFactory> list = factory.getEngineFactories();
 
         se = factory.getEngineByName("js");
 
@@ -53,6 +56,10 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
             fr.close();
         }
         catch (Exception e) { e.printStackTrace(); }
+    }
+
+    private void setConstants() {
+        SPAWNRATE = (Integer) se.get("spawnrate");
     }
 
     public static void main(String[] args) {
@@ -66,7 +73,12 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
     }
 
     private void update() {
-        enemyList.put(
+        elapsedTime = System.currentTimeMillis() - lastTime;
+        totalTime += elapsedTime;
+        timeSec = totalTime / 1000;
+        lastTime = System.currentTimeMillis();
+        if (timeSec % UPDATESCRIPT == 0) runScript();
+        if (timeSec % SPAWNRATE == 0) enemyList.put(
                 UUID.randomUUID(),
                 new Enemy(
                         UUID.randomUUID(),
@@ -76,11 +88,9 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
                         ((Double) se.get("speed")).floatValue()
                 )
         );
-        enemyList.forEach(new BiConsumer<UUID, Enemy>() {
-            @Override
-            public void accept(UUID uuid, Enemy enemy) {
-                enemy.update
-            }
+        enemyList.forEach((uuid, enemy) -> {
+            enemy.updateDestination(lastKnownPositions.get(uuid));
+            enemy.move();
         });
     }
 
@@ -110,10 +120,19 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
             // format: create, clientId, itemId, type, x, y, z, u, v, n
             if (msgTokens[0].compareTo("create") == 0) {
                 UUID clientID = UUID.fromString(msgTokens[1]);
-                String[] pos = {msgTokens[2], msgTokens[3], msgTokens[4]};
-                String[] head = { msgTokens[5], msgTokens[6], msgTokens[7] };
+                UUID itemID = UUID.fromString(msgTokens[2]);
+                String type = msgTokens[3];
+                String[] pos = {msgTokens[4], msgTokens[5], msgTokens[6]};
+                String[] head = { msgTokens[7], msgTokens[8], msgTokens[9] };
                 if(lastKnownPositions.containsKey(clientID))
-                    lastKnownPositions.put(it)
+                    lastKnownPositions.put(
+                            clientID,
+                            Vector3f.createFrom(
+                                    Float.parseFloat(msgTokens[2]),
+                                    Float.parseFloat(msgTokens[3]),
+                                    Float.parseFloat(msgTokens[4])
+                            )
+                    );
                 sendCreateMessages(clientID, itemID, type, pos, head);
                 sendWantsDetailsMessages(clientID);
             }

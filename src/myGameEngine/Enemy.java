@@ -54,7 +54,7 @@ public class Enemy {
         }
     }
 
-    private void updateDestination (Vector3 target) {
+    public void updateDestination (Vector3 target) {
         float targetAngle = calcAngle(targetPos);
         targetPos = target;
         orbitDest = calcPos(targetAngle, ORBIT);
