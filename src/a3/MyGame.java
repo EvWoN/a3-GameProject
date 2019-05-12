@@ -2,13 +2,11 @@ package a3;
 
 import javafx.beans.property.SimpleBooleanProperty;
 import myGameEngine.Managers.AstronautAnimator;
-import myGameEngine.Managers.Builder;
 import myGameEngine.Managers.Movement2DManager;
 import myGameEngine.Networking.GhostAvatar;
 import myGameEngine.Networking.ProtocolClient;
 import myGameEngine.actions.*;
 import myGameEngine.controller.OrbitCameraController;
-import myGameEngine.controller.SquishyBounceController;
 import net.java.games.input.Component;
 import net.java.games.input.Controller;
 import ray.input.GenericInputManager;
@@ -71,7 +69,6 @@ public class MyGame extends VariableFrameRateGame {
 
     //Controllers
     private RotationController rc;
-    private SquishyBounceController sc;
     private OrbitCameraController occ;
 
     public boolean isClientConnected = false;
@@ -376,19 +373,16 @@ public class MyGame extends VariableFrameRateGame {
         SceneNode cameraNode = sm.getSceneNode("CameraNode");
         Camera camera = sm.getCamera("Camera");
         occ = new OrbitCameraController(camera,cameraNode,groundNode,astronautNode);
-    
-        Builder builder = new Builder(sm.getSceneNode("spaceshipNode"),sm);
-        builder.setPointsToBuild(10);
         
         //Movement
         MoveForwardAction moveForwardAction = new MoveForwardAction(astronautNode, occ, mm);
         MoveBackwardAction moveBackwardAction = new MoveBackwardAction(astronautNode, occ, mm);
         MoveRightAction moveRightAction = new MoveRightAction   (astronautNode, occ, mm);
         MoveLeftAction moveLeftAction = new MoveLeftAction      (astronautNode, occ, mm);
+
         //Actions
-        ThrowItemAction throwItemAction = new ThrowItemAction   (astronautNode, holdingItem, partsList, physicsEngine, sc);
+        ThrowItemAction throwItemAction = new ThrowItemAction   (astronautNode, holdingItem, partsList, physicsEngine);
         GameQuitAction gameQuitAction = new GameQuitAction(this);
-        BuildAction buildAction = new BuildAction(astronautSkeleton.getParentSceneNode(),holdingItem,builder,1000);
         ToggleMovementAction toggleMovementAction = new ToggleMovementAction(followGround, astronautNode);
         ToggleHostAction toggleHostAction = new ToggleHostAction(host);
 
@@ -443,10 +437,6 @@ public class MyGame extends VariableFrameRateGame {
                         toggleHostAction,
                         InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY
                 );
-                im.associateAction(c,
-                        Component.Identifier.Key.E,
-                        buildAction,
-                        InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
             }
     
             if (c.getType() == Controller.Type.GAMEPAD) {
@@ -491,10 +481,8 @@ public class MyGame extends VariableFrameRateGame {
     }
 
     private void initControllers(SceneManager sm) {
-        sc = new SquishyBounceController();
         rc = new RotationController(Vector3f.createUnitVectorY(), .1f);
         sm.addController(rc);
-        sm.addController(sc);
     }
 
     @Override
@@ -512,23 +500,6 @@ public class MyGame extends VariableFrameRateGame {
         astronautNode.scale(0.3f, 0.3f, 0.3f);
         astronautNode.setLocalRotation(UP);
         setAstronautTexture(astronautSkeleton);
-    
-        //Ground floor
-        Entity spaceshipObj = sm.createEntity("spaceshipObj", "assembeled_ship.obj");
-        SceneNode spaceshipObjNode = sm.createSceneNode("spaceshipObjNode");
-        SceneNode spaceshipNode = sm.getRootSceneNode().createChildSceneNode("spaceshipNode");
-        spaceshipObjNode.attachObject(spaceshipObj);
-//        spaceshipObjNode.scale(9f,9f,9f);
-        spaceshipNode.attachChild(spaceshipObjNode);
-        spaceshipObjNode.moveForward(.8f);
-//        spaceshipNode.moveUp(10f);
-        spaceshipNode.setLocalPosition(0.0f, 0.0f, 0.0f);
-        spaceshipNode.moveLeft(6f);
-        spaceshipNode.moveUp(.2f);
-//        spaceshipNode.moveDown(.2f);
-    
-        //Scene axis
-        showAxis(eng, sm);
 
         Entity ufo1, ufo2;
         ufo1 = sm.createEntity("Ufo1", "Ufo.obj");
@@ -570,13 +541,10 @@ public class MyGame extends VariableFrameRateGame {
         //Make Skybox
         SkyBox startBox = makeSkyBox("red");
         sm.setActiveSkyBox(startBox);
-        sc = new SquishyBounceController();
-        sm.addController(sc);
 
         initPhysicsSystem();
         createPhysicsWorld();
         setupControls(sm);
-//        makeGroundFloor();
         makeHeightMap();
         setupNetworking();
         processNetworking(eng.getElapsedTimeMillis());
@@ -748,38 +716,6 @@ public class MyGame extends VariableFrameRateGame {
         lineZ.setPrimitive(Primitive.LINES);
         SceneNode lineZN = sm.getRootSceneNode().createChildSceneNode(lineZ.getName() + "Node");
         lineZN.attachObject(lineZ);
-    }
-
-    private void makeGroundFloor() throws IOException {
-        ManualObject groundFloorObj = sm.createManualObject("groundFloor");
-        ManualObjectSection groundFloorSect = groundFloorObj.createManualSection("groundFloorSection");
-        groundFloorObj.setGpuShaderProgram(sm.getRenderSystem().getGpuShaderProgram(GpuShaderProgram.Type.RENDERING));
-
-        float[] vertices = new float[]{
-                5.0f, 0.0f, 5.0f, 5.0f, 0.0f, -5.0f, -5.0f, 0.0f, 5.0f,//tri`1
-                -5.0f, 0.0f, -5.0f, -5.0f, 0.0f, 5.0f, 5.0f, 0.0f, -5.0f//tri`2
-
-        };
-
-            int[] indices = new int[]{0, 1, 2, 3, 4, 5};
-        groundFloorSect.setVertexBuffer(BufferUtil.directFloatBuffer(vertices));
-        groundFloorSect.setIndexBuffer(BufferUtil.directIntBuffer(indices));
-        //Texture
-        Texture tex = eng.getTextureManager().getAssetByPath("sun.jpeg");
-        TextureState texState = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
-            texState.setTexture(tex);
-
-        FrontFaceState faceState = (FrontFaceState) sm.getRenderSystem().createRenderState(RenderState.Type.FRONT_FACE);
-        groundFloorObj.setDataSource(Renderable.DataSource.INDEX_BUFFER);
-        groundFloorObj.setRenderState(texState);
-        groundFloorObj.setRenderState(faceState);
-        groundFloorObj.setPrimitive(Primitive.TRIANGLES);
-
-
-        SceneNode groundFloorNode = sm.getRootSceneNode().createChildSceneNode(groundFloorObj.getName() + "Node");
-        groundFloorNode.attachObject(groundFloorObj);
-        groundFloorNode.moveDown(8f);
-        groundFloorNode.scale(10f,10f,10f);
     }
 
     private void makeHeightMap() {
