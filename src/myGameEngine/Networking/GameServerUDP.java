@@ -3,23 +3,19 @@ package myGameEngine.Networking;
 import myGameEngine.Enemy;
 import ray.networking.server.GameConnectionServer;
 import ray.networking.server.IClientInfo;
-import ray.rage.Engine;
-import ray.rage.game.Game;
 import ray.rml.Vector3;
 import ray.rml.Vector3f;
 
 import javax.script.ScriptEngine;
-import javax.script.ScriptEngineFactory;
 import javax.script.ScriptEngineManager;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Random;
 import java.util.UUID;
-import java.util.function.BiConsumer;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class GameServerUDP extends GameConnectionServer<UUID> {
 
@@ -92,21 +88,42 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
         timeSec = totalTime / 1000000;
         lastTime = System.currentTimeMillis();
         if (timeSec % UPDATESCRIPT == 0) runScript();
-        if (timeSec % SPAWNRATE == 0) enemyList.put(
-                UUID.randomUUID(),
-                new Enemy(
-                        UUID.randomUUID(),
-                        rand.nextInt(360) + rand.nextFloat(),
-                        AMMO,
-                        ORBIT,
-                        SPEED,
-                        START
-                )
-        );
+        if (timeSec % SPAWNRATE == 0) {
+            enemyList.put(
+                    UUID.randomUUID(),
+                    new Enemy(
+                            rand.nextInt(360) + rand.nextFloat(),
+                            AMMO,
+                            ORBIT,
+                            SPEED,
+                            START
+                    )
+            );
+        }
         enemyList.forEach((uuid, enemy) -> {
-            enemy.updateDestination(lastKnownPositions.get(uuid));
-            enemy.move();
+            UUID targ = closestTarget(enemy);
+            if(targ != null) {
+                enemy.updateDestination(lastKnownPositions.get(targ));
+                enemy.move();
+            }
         });
+    }
+
+    private UUID closestTarget(Enemy enemy) {
+        if(lastKnownPositions.size() < 1) return null;
+        Vector3 enemyPos = enemy.getLocation();
+        AtomicReference<UUID> targ = new AtomicReference<>();
+        AtomicReference<Float> min = new AtomicReference<>();
+        AtomicReference<Float> dist = new AtomicReference<>();
+        min.set(Float.MAX_VALUE);
+        lastKnownPositions.forEach((uuid, pos) -> {
+            dist.set((pos.sub(enemyPos)).length());
+            if(dist.get() < min.get()) {
+                min.set(dist.get());
+                targ.set(uuid);
+            }
+        });
+        return targ.get();
     }
 
     @Override

@@ -12,8 +12,6 @@ public class Enemy {
     private Vector3 orbitDest;
     private Vector3 targetPos;
     private float angle;
-    private UUID target;
-
 
     private int ammo;
     private boolean orbiting = false;
@@ -22,8 +20,7 @@ public class Enemy {
     private final float SPEED;
     private final float START;
 
-    public Enemy(UUID target, float angle, int ammo, float orbit, float speed, float start) {
-        this.target = target;
+    public Enemy(float angle, int ammo, float orbit, float speed, float start) {
         this.angle = angle;
         this.ammo = ammo;
         this.ORBIT = orbit;
@@ -62,6 +59,8 @@ public class Enemy {
         targetPos = target;
         orbitDest = calcPos(targetAngle, ORBIT);
     }
+
+    public Vector3 getLocation() { return location; }
 
     private Vector3 calcPos(float angle, float radius) {
         return Vector3f.createFrom(
