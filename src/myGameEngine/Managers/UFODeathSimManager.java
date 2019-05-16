@@ -154,7 +154,6 @@ public class UFODeathSimManager {
             parts.forEach(new Consumer<Node>() {
                 @Override
                 public void accept(Node node) {
-                    System.out.println("Is in Scene > " + ((SceneNode)node).isInSceneGraph() +" "+ node.getName());
                     if(node.getWorldPosition().y() < heightTreshold){
                         System.out.println(node.getWorldPosition().y());
                         pe.removeObject(node.getPhysicsObject().getUID());
@@ -162,7 +161,10 @@ public class UFODeathSimManager {
                         toRemove.add(node);
                     } else {
                         //Scaling based on time alive and time till death
-                        float v = 1 - timeElapsedTotal / timeTillDeath;
+//                        float v = 1 - timeElapsedTotal / (timeTillDeath);
+//                        float v = 1-(1-(((float) Math.exp(-3*((timeElapsedTotal / timeTillDeath))))));
+//                        System.out.println(v);
+                        float v = 1 - timeElapsedTotal / (timeTillDeath+timeTillDeath*.1f);
                         node.setLocalScale(v,v,v);
                     }
                 }

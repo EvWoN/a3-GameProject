@@ -551,10 +551,9 @@ public class MyGame extends VariableFrameRateGame {
         groundNode = sm.getRootSceneNode().createChildSceneNode("GroundNode");
         SceneNode groundMeshNode = sm.createSceneNode("groundMesh");
         groundMeshNode.attachObject(groundEntity);
-        groundMeshNode.setLocalPosition(0.0f, -9f, 0.0f);
+        groundMeshNode.setLocalPosition(0.0f, -9.2f, 0.0f);
         groundMeshNode.scale(9f,9f,9f);
         groundNode.attachChild(groundMeshNode);
-        groundNode.moveDown(.2f);
 
         setupLighting();
 
