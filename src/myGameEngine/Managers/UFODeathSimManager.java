@@ -3,13 +3,11 @@ package myGameEngine.Managers;
 import myGameEngine.Tools.ArrayHelper;
 import ray.physics.PhysicsEngine;
 import ray.physics.PhysicsObject;
-import ray.rage.scene.Entity;
-import ray.rage.scene.Node;
-import ray.rage.scene.SceneManager;
-import ray.rage.scene.SceneNode;
+import ray.rage.scene.*;
 import ray.rml.Matrix3;
 import ray.rml.Matrix4;
 
+import java.awt.*;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.function.Consumer;
@@ -135,21 +133,44 @@ public class UFODeathSimManager {
      */
     private class DeathSimInstance {
         private float timeElapsedTotal = 0;
+        private float explosionTime = 400f;
         private Node simNode;
+        private Light explosionLight;
         private LinkedList<Node> parts;
     
         public DeathSimInstance(Node simNode) {
             this.simNode = simNode;
-            
+    
             parts = new LinkedList();
             for (Node childNode : simNode.getChildNodes()) {
                 parts.add(childNode);
             }
+            
+            explosionLight = sm.createLight(simNode.getName() + "Light", Light.Type.POINT);
+            setLightColor();
+            
+            SceneNode lightNode = sm.createSceneNode(explosionLight.getName() + "N");
+            simNode.attachChild(lightNode);
+            lightNode.attachObject(explosionLight);
+            lightNode.setLocalPosition(parts.getFirst().getWorldPosition());
         }
     
+        private void setLightColor() {
+            explosionLight.setRange(40f-(30*timeElapsedTotal/explosionTime));
+            explosionLight.setAmbient(new Color(.1f-.1f*(timeElapsedTotal/explosionTime), .1f-.1f*(timeElapsedTotal/explosionTime), 0));
+            explosionLight.setSpecular(new Color(1f-(timeElapsedTotal/explosionTime), 1f-(timeElapsedTotal/explosionTime), 0));
+            explosionLight.setDiffuse(new Color(1f-(timeElapsedTotal/explosionTime), 1f-(timeElapsedTotal/explosionTime), 0));
+        }
+        
         public void update(float elapsedTime){
             this.timeElapsedTotal += elapsedTime;
-            
+            if(timeElapsedTotal<explosionTime) {
+                setLightColor();
+            } else {
+                if(explosionLight.getParentNode() != null) {
+                    sm.destroySceneNode(explosionLight.getParentSceneNode());
+                }
+            }
             LinkedList<Node> toRemove = new LinkedList();
             parts.forEach(new Consumer<Node>() {
                 @Override
@@ -164,7 +185,7 @@ public class UFODeathSimManager {
 //                        float v = 1 - timeElapsedTotal / (timeTillDeath);
 //                        float v = 1-(1-(((float) Math.exp(-3*((timeElapsedTotal / timeTillDeath))))));
 //                        System.out.println(v);
-                        float v = 1 - timeElapsedTotal / (timeTillDeath+timeTillDeath*.1f);
+                        float v = 1 - timeElapsedTotal / (timeTillDeath+timeTillDeath*.4f);
                         node.setLocalScale(v,v,v);
                     }
                 }
@@ -183,6 +204,7 @@ public class UFODeathSimManager {
                     sm.destroySceneNode((SceneNode) node);
                 }
             });
+            sm.destroySceneNode((SceneNode) simNode);
         }
     
         public float getTimeElapsedTotal() {
