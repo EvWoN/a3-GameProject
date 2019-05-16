@@ -25,12 +25,14 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
     private Random rand;
     private ScriptEngine se;
 
-    private long totalTime, elapsedTime, lastTime, timeSec;
+    private long totalTime, elapsedTime, lastTime, timeSec, lastSec;
 
     private int SPAWNRATE, UPDATESCRIPT, //Server
                 AMMO; //Enemy
 
     private float ORBIT, SPEED, START; //Enemy
+
+    private boolean addedEnemy, updatedScripts;
 
     public GameServerUDP(int localPort) throws IOException {
         super(localPort, ProtocolType.UDP);
@@ -38,7 +40,9 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
         rand = new Random();
         lastTime = System.currentTimeMillis();
         totalTime = 0;
+        lastSec = -1;
         enemyList = new HashMap<>();
+        addedEnemy = updatedScripts = false;
         runScript();
         setConstants();
         System.out.println("Local IP: " + InetAddress.getLocalHost() + " Port: " +localPort);
@@ -46,8 +50,6 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
             this.update();
         }
     }
-
-
 
     private void runScript() {
         ScriptEngineManager factory = new ScriptEngineManager();
@@ -85,21 +87,40 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
     private void update() {
         elapsedTime = System.currentTimeMillis() - lastTime;
         totalTime += elapsedTime;
-        timeSec = totalTime / 1000000;
+        timeSec = totalTime / 1000;
         lastTime = System.currentTimeMillis();
-        if (timeSec % UPDATESCRIPT == 0) runScript();
-        if (timeSec % SPAWNRATE == 0) {
-            enemyList.put(
-                    UUID.randomUUID(),
-                    new Enemy(
-                            rand.nextInt(360) + rand.nextFloat(),
-                            AMMO,
-                            ORBIT,
-                            SPEED,
-                            START
-                    )
-            );
+        if(lastKnownPositions.size() < 1) return;
+        if (timeSec % UPDATESCRIPT == 0)
+        {
+            if(!updatedScripts) {
+                updatedScripts = true;
+                System.out.println("Updated script.");
+                runScript();
+            }
         }
+        else updatedScripts = false;
+        if (timeSec % SPAWNRATE == 0) {
+            if(!addedEnemy) {
+                System.out.println("Spawning an enemy.");
+                addedEnemy = true;
+                UUID uuid = UUID.randomUUID();
+                Enemy enemy = new Enemy(
+                        uuid,
+                        rand.nextInt(360) + rand.nextFloat(),
+                        AMMO,
+                        ORBIT,
+                        SPEED,
+                        START
+                );
+                enemyList.put(
+                        uuid,
+                        enemy
+                );
+                sendEnemy(enemy);
+            }
+        }
+        else addedEnemy = false;
+        //System.out.println("Moving enemies.");
         enemyList.forEach((uuid, enemy) -> {
             UUID targ = closestTarget(enemy);
             if(targ != null) {
@@ -326,6 +347,26 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
             String message =    "bye," +
                                 clientID.toString();
             forwardPacketToAll(message, clientID);
+        }
+        catch (IOException e) { e.printStackTrace(); }
+    }
+
+    public void sendEnemy(Enemy enemy) {
+        UUID itemID = enemy.getUUID();
+        String type = "ufo";
+        Vector3 position = enemy.getLocation();
+        Vector3 head = enemy.getHeading();
+        try {
+            String message =    "create,"  +
+                    itemID.toString() + "," +
+                    type + "," +
+                    position.x() + "," +
+                    position.y() + "," +
+                    position.z() + "," +
+                    head.x() + "," +
+                    head.y() + "," +
+                    head.z() + ",";
+            super.sendPacketToAll(message);
         }
         catch (IOException e) { e.printStackTrace(); }
     }

@@ -8,9 +8,11 @@ import java.util.UUID;
 
 public class Enemy {
 
+    private UUID id;
     private Vector3 location;
     private Vector3 orbitDest;
     private Vector3 targetPos;
+    private Vector3 heading;
     private float angle;
 
     private int ammo;
@@ -20,7 +22,8 @@ public class Enemy {
     private final float SPEED;
     private final float START;
 
-    public Enemy(float angle, int ammo, float orbit, float speed, float start) {
+    public Enemy(UUID uuid, float angle, int ammo, float orbit, float speed, float start) {
+        this.id = uuid;
         this.angle = angle;
         this.ammo = ammo;
         this.ORBIT = orbit;
@@ -62,6 +65,10 @@ public class Enemy {
 
     public Vector3 getLocation() { return location; }
 
+    public UUID getUUID() { return this.id; }
+
+    public Vector3 getHeading() { return this.heading; }
+
     private Vector3 calcPos(float angle, float radius) {
         return Vector3f.createFrom(
                 (float) Math.sin(Math.toRadians(angle)) * radius,
@@ -71,4 +78,9 @@ public class Enemy {
     }
 
     private float calcAngle(Vector3 pos) { return (float) Math.atan(pos.x() / pos.z()); }
+
+    private void updateHeading() {
+        if(ammo > 0 && !orbiting) heading = orbitDest.sub(location);
+        else heading = (targetPos != null) ? targetPos.sub(location) : orbitDest.sub(location);
+    }
 }
