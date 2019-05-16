@@ -14,6 +14,7 @@ import ray.rml.Vector3f;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class OrbitCameraController {
     private Camera camera;//the camera being controlled
@@ -22,10 +23,10 @@ public class OrbitCameraController {
     private Vector3 cameraFocus;
     private float cameraAzimuth;//rotation of camera around Y axis
     private float cameraElevation;//elevation of camera above targets
-//    private float minElev = 5f, maxElev = 80f;//Elevation constraints in deg
+    //    private float minElev = 5f, maxElev = 80f;//Elevation constraints in deg
     private float minElev = -40f, maxElev = 80f;//Elevation constraints in deg
     private float radius;//distance between camera and targets
-//    private float minRad = 10f, maxRad = 17f;//radius constraints
+    //    private float minRad = 10f, maxRad = 17f;//radius constraints
     private float minRad = 2f, maxRad = 50f;//radius constraints=
     private Vector3 targetPos;//targets’s position in the world
     private Vector3 worldUpVec;
@@ -40,13 +41,13 @@ public class OrbitCameraController {
         worldUpVec = Vector3f.createFrom(0.0f, 1.0f, 0.0f);
         updateCameraPosition();
     }
-
+    
     public OrbitCameraController(Camera cam, Node camN, Node... targs) {
-        this(cam, camN, Arrays.asList(targs));
+        this(cam, camN, Arrays.stream(targs).collect(Collectors.toList()));
     }
-
-    public OrbitCameraController(Camera cam, Node camN, Node targs) {
-        this(cam, camN, Collections.singletonList(targs));
+    
+    public OrbitCameraController(Camera cam, Node camN, Node target) {
+        this(cam, camN, Collections.singletonList(target));
     }
     
     // Updates camera position: computes azimuth, elevation, and distance
@@ -63,81 +64,107 @@ public class OrbitCameraController {
         cameraN.setLocalPosition(Vector3f.createFrom((float) x, (float) y, (float) z).add(cameraFocus));
         cameraN.lookAt(cameraFocus, worldUpVec);
     }
-
-    private void updateFocusLocation(){
-        cameraFocus = Vector3f.createFrom(0,0,0);
-            for (Node target : targets) {
+    
+    private void updateFocusLocation() {
+        cameraFocus = Vector3f.createFrom(0, 0, 0);
+        for (Node target : targets) {
 //                System.out.println("\tNode: " + target); //Debug
-                cameraFocus = cameraFocus.add(target.getWorldPosition());
-            }
-            cameraFocus = cameraFocus.div(targets.size());
+            cameraFocus = cameraFocus.add(target.getWorldPosition());
+        }
+        cameraFocus = cameraFocus.div(targets.size());
     }
     
     public void setupInput(InputManager im, Controller controller) {
         Action orbitAAction = new OrbitAroundAction();
         Action orbitRAction = new OrbitRadiusAction();
         Action orbitEAction = new OrbitElevationAction();
-    
+        
         Action orbitAActionKb = new OrbitAroundActionKeyboard(orbitAAction);
         Action orbitRActionKb = new OrbitRadiusActionKeyboard(orbitRAction);
         Action orbitEActionKb = new OrbitElevationActionKeyboard(orbitEAction);
-        if(controller.getType().equals(Controller.Type.GAMEPAD)) {
+        if (controller.getType().equals(Controller.Type.GAMEPAD)) {
             im.associateAction(controller, Component.Identifier.Axis.RX, orbitAAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
             im.associateAction(controller, Component.Identifier.Button._3, orbitRAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
             im.associateAction(controller, Component.Identifier.Button._2, orbitRActionKb, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
-            im.associateAction(controller, Component.Identifier.Axis.RY, orbitEAction,InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
-        } else if(controller.getType().equals(Controller.Type.KEYBOARD)) {
+            im.associateAction(controller, Component.Identifier.Axis.RY, orbitEAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+        } else if (controller.getType().equals(Controller.Type.KEYBOARD)) {
             im.associateAction(controller, Component.Identifier.Key.RIGHT, orbitAAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
             im.associateAction(controller, Component.Identifier.Key.COMMA, orbitRAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
-            im.associateAction(controller, Component.Identifier.Key.DOWN, orbitEAction,InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+            im.associateAction(controller, Component.Identifier.Key.DOWN, orbitEAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
             im.associateAction(controller, Component.Identifier.Key.LEFT, orbitAActionKb, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
             im.associateAction(controller, Component.Identifier.Key.PERIOD, orbitRActionKb, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
-            im.associateAction(controller, Component.Identifier.Key.UP, orbitEActionKb,InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+            im.associateAction(controller, Component.Identifier.Key.UP, orbitEActionKb, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
         }
     }
     
-    private class OrbitAroundActionKeyboard extends AbstractInputAction{
+    public float getCameraAzimuth() {
+        return (cameraAzimuth + 180) % 380;
+    }
     
+    private class OrbitAroundActionKeyboard extends AbstractInputAction {
+        
         Action orbitAAction;
         
-        OrbitAroundActionKeyboard(Action orbitAAction){
+        OrbitAroundActionKeyboard(Action orbitAAction) {
             this.orbitAAction = orbitAAction;
         }
-    
+        
         @Override
         public void performAction(float v, Event event) {
-            event.set(event.getComponent(),-1,event.getNanos());
-            orbitAAction.performAction(v,event);
+            event.set(event.getComponent(), -1, event.getNanos());
+            orbitAAction.performAction(v, event);
         }
     }
     
-    private class OrbitRadiusActionKeyboard extends AbstractInputAction{
-    
+    private class OrbitRadiusActionKeyboard extends AbstractInputAction {
+        
         Action orbitRAction;
         
-        OrbitRadiusActionKeyboard(Action orbitRAction){
+        OrbitRadiusActionKeyboard(Action orbitRAction) {
             this.orbitRAction = orbitRAction;
         }
         
         @Override
         public void performAction(float v, Event event) {
-            event.set(event.getComponent(),-1,event.getNanos());
-            orbitRAction.performAction(v,event);
+            event.set(event.getComponent(), -1, event.getNanos());
+            orbitRAction.performAction(v, event);
         }
     }
     
-    private class OrbitElevationActionKeyboard extends AbstractInputAction{
+    /**
+     * Add target node to focus targets
+     * @param node new target node
+     * @return true if node isn't already part of targets, it is added
+     */
+    public boolean addTarget(Node node){
+        if(!targets.contains(node)){
+            return targets.add(node);
+        } else {
+            return false;
+        }
+    }
     
+    /**
+     * Remove target node from focus targets
+     * @param node new target node
+     * @return true if node is part of targets, it is removed
+     */
+    public boolean removeTarget(Node node){
+        return targets.remove(node);
+    }
+    
+    private class OrbitElevationActionKeyboard extends AbstractInputAction {
+        
         Action orbitEAction;
         
-        OrbitElevationActionKeyboard(Action orbitEAction){
+        OrbitElevationActionKeyboard(Action orbitEAction) {
             this.orbitEAction = orbitEAction;
         }
         
         @Override
         public void performAction(float v, Event event) {
-            event.set(event.getComponent(),-1,event.getNanos());
-            orbitEAction.performAction(v,event);
+            event.set(event.getComponent(), -1, event.getNanos());
+            orbitEAction.performAction(v, event);
         }
     }
     
@@ -145,12 +172,12 @@ public class OrbitCameraController {
         //Moves the camera around the targets (changes camera azimuth).
         public void performAction(float time, net.java.games.input.Event evt) {
             float rotAmount;
-            float strength = evt.getValue()*2;
-            if (strength <- 0.2) {
-                rotAmount = strength*(time/17);
+            float strength = evt.getValue() * 2;
+            if (strength < -0.2) {
+                rotAmount = strength * (time / 17);
             } else {
                 if (strength > 0.2) {
-                    rotAmount = strength*(time/17);
+                    rotAmount = strength * (time / 17);
                 } else {
                     rotAmount = 0.0f;
                 }
@@ -167,19 +194,19 @@ public class OrbitCameraController {
             float moveInAmount;
             float strength = evt.getValue();
             if (strength < -0.2) {
-                moveInAmount = strength*(time/17);
+                moveInAmount = strength * (time / 17);
             } else {
                 if (strength > 0.2) {
-                    moveInAmount = strength*(time/17);
+                    moveInAmount = strength * (time / 17);
                 } else {
                     moveInAmount = 0.0f;
                 }
             }
-            float newRad = radius + moveInAmount/10;
+            float newRad = radius + moveInAmount / 10;
             //Checking zoom values
-            if(minRad > newRad){
+            if (minRad > newRad) {
                 radius = minRad;
-            } else if (maxRad < newRad){
+            } else if (maxRad < newRad) {
                 radius = maxRad;
             } else radius = newRad;
             updateCameraPosition();
@@ -190,28 +217,24 @@ public class OrbitCameraController {
         //Moves the camera up and down around the targets
         public void performAction(float time, net.java.games.input.Event evt) {
             float moveUpAmount;
-            float strength = evt.getValue()*2;
+            float strength = evt.getValue() * 2;
             if (strength < -0.2) {
-                moveUpAmount = -strength*(time/17);
+                moveUpAmount = -strength * (time / 17);
             } else {
                 if (strength > 0.2) {
-                    moveUpAmount = -strength*(time/17);
+                    moveUpAmount = -strength * (time / 17);
                 } else {
                     moveUpAmount = 0.0f;
                 }
             }
             float newElev = cameraElevation + moveUpAmount;
             //Checking zoom values
-            if(minElev > newElev){
+            if (minElev > newElev) {
                 cameraElevation = minElev;
-            } else if (maxElev < newElev){
+            } else if (maxElev < newElev) {
                 cameraElevation = maxElev;
             } else cameraElevation = newElev;
             updateCameraPosition();
         }
-    }
-    
-    public float getCameraAzimuth() {
-        return (cameraAzimuth+180)%380;
     }
 }

@@ -5,6 +5,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import myGameEngine.Managers.AstronautAnimator;
 import myGameEngine.Managers.Movement2DManager;
+import myGameEngine.Managers.UFODeathSimManager;
 import myGameEngine.Networking.GhostAvatar;
 import myGameEngine.Networking.ProtocolClient;
 import myGameEngine.actions.*;
@@ -25,18 +26,14 @@ import ray.rage.game.Game;
 import ray.rage.game.VariableFrameRateGame;
 import ray.rage.rendersystem.RenderSystem;
 import ray.rage.rendersystem.RenderWindow;
-import ray.rage.rendersystem.Renderable;
 import ray.rage.rendersystem.Renderable.Primitive;
 import ray.rage.rendersystem.Viewport;
 import ray.rage.rendersystem.gl4.GL4RenderSystem;
-import ray.rage.rendersystem.shader.GpuShaderProgram;
-import ray.rage.rendersystem.states.FrontFaceState;
 import ray.rage.rendersystem.states.RenderState;
 import ray.rage.rendersystem.states.TextureState;
 import ray.rage.scene.*;
 import ray.rage.scene.Camera.Frustum.Projection;
 import ray.rage.scene.controllers.RotationController;
-import ray.rage.util.BufferUtil;
 import ray.rage.util.Configuration;
 import ray.rml.*;
 
@@ -48,10 +45,10 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
-import java.util.*;
-import java.util.List;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Random;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 public class MyGame extends VariableFrameRateGame {
@@ -67,7 +64,6 @@ public class MyGame extends VariableFrameRateGame {
     private int serverPort;
     private IGameConnection.ProtocolType serverProtocol;
     private ProtocolClient protClient;
-    private List<UUID> gameObjectsToRemove;
 
     //Controllers
     private RotationController rc;
@@ -89,6 +85,7 @@ public class MyGame extends VariableFrameRateGame {
 
     private ArrayList<SceneNode> partsList;
 
+    private UFODeathSimManager deathSimManager;
     private PhysicsEngine physicsEngine;
     private PhysicsObject ground;
 
@@ -149,7 +146,6 @@ public class MyGame extends VariableFrameRateGame {
     }
     
     private void setupNetworking() {
-        gameObjectsToRemove = new LinkedList<UUID>();
         isClientConnected = false;
         try {
             System.out.println("Networking is being set up");
@@ -211,7 +207,8 @@ public class MyGame extends VariableFrameRateGame {
         }
         
         if(host.get()) {
-            updatePhysics();
+            updatePhysics(elapsedTimeMillis);
+            deathSimManager.updateInstances(elapsedTimeMillis);
             pickupItems();
             checkItems();
             moveEnemies();
@@ -236,8 +233,7 @@ public class MyGame extends VariableFrameRateGame {
         mm.updateMovements();
     }
 
-    private void updatePhysics() {
-        float time = eng.getElapsedTimeMillis();
+    private void updatePhysics(float time) {
         Matrix4 mat;
         physicsEngine.update(time);
         for(SceneNode node : eng.getSceneManager().getSceneNodes()) {
@@ -245,12 +241,7 @@ public class MyGame extends VariableFrameRateGame {
             if(node.getPhysicsObject() != null) {
                 mat = Matrix4f.createFrom(toFloatArray(node.getPhysicsObject().getTransform()));
                 node.setLocalPosition(mat.value(0, 3), mat.value(1, 3), mat.value(2, 3));
-                protClient.sendMoveItemMessage(
-                        node.getName().substring("PartNode".length() + 1),
-                        node.getLocalPosition(),
-                        node.getLocalForwardAxis()
-                );
-                System.out.println("Sending MoveItem: " + node.getName().substring("PartNode".length() + 1));
+                node.setLocalRotation(mat.toMatrix3());
             }
         }
     }
@@ -332,9 +323,6 @@ public class MyGame extends VariableFrameRateGame {
         if (protClient != null)
             protClient.processPackets();
         // remove ghost avatars for players who have left the game
-        Iterator<UUID> it = gameObjectsToRemove.iterator();
-        while (it.hasNext()) { sm.destroySceneNode(it.next().toString()); }
-        gameObjectsToRemove.clear();
         return true;
     }
 
@@ -408,6 +396,7 @@ public class MyGame extends VariableFrameRateGame {
         GameQuitAction gameQuitAction = new GameQuitAction(this);
         ToggleMovementAction toggleMovementAction = new ToggleMovementAction(followGround, astronautNode);
         ToggleHostAction toggleHostAction = new ToggleHostAction(host);
+        DeathSimTestAction deathSimTestAction = new DeathSimTestAction(this);
         
 
         for (Controller c : controllers) {
@@ -461,6 +450,12 @@ public class MyGame extends VariableFrameRateGame {
                         toggleHostAction,
                         InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY
                 );
+                im.associateAction(
+                        c,
+                        Component.Identifier.Key.T,
+                        deathSimTestAction,
+                        InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY
+                );
             }
     
             if (c.getType() == Controller.Type.GAMEPAD) {
@@ -482,6 +477,7 @@ public class MyGame extends VariableFrameRateGame {
                         throwItemAction,
                         InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY
                 );
+                
             }
         }
     }
@@ -565,13 +561,14 @@ public class MyGame extends VariableFrameRateGame {
         //Make Skybox
         SkyBox startBox = makeSkyBox("red");
         sm.setActiveSkyBox(startBox);
-
+        
         initPhysicsSystem();
         createPhysicsWorld();
         setupControls(sm);
         makeHeightMap();
         setupNetworking();
         processNetworking(eng.getElapsedTimeMillis());
+        deathSimManager = new UFODeathSimManager(physicsEngine,sm,8000f);
         System.out.println(isClientConnected);
     }
 
@@ -722,26 +719,6 @@ public class MyGame extends VariableFrameRateGame {
         return skyBox;
     }
 
-    private void showAxis(Engine eng, SceneManager sm) throws IOException {
-        //lineX
-        ManualObject lineX = makeXIndicator(eng, sm);
-        lineX.setPrimitive(Primitive.LINES);
-        SceneNode lineXN = sm.getRootSceneNode().createChildSceneNode(lineX.getName() + "Node");
-        lineXN.attachObject(lineX);
-
-        //lineY
-        ManualObject lineY = makeYIndicator(eng, sm);
-        lineY.setPrimitive(Primitive.LINES);
-        SceneNode lineYN = sm.getRootSceneNode().createChildSceneNode(lineY.getName() + "Node");
-        lineYN.attachObject(lineY);
-
-        //lineZ
-        ManualObject lineZ = makeZIndicator(eng, sm);
-        lineZ.setPrimitive(Primitive.LINES);
-        SceneNode lineZN = sm.getRootSceneNode().createChildSceneNode(lineZ.getName() + "Node");
-        lineZN.attachObject(lineZ);
-    }
-
     private void makeHeightMap() {
         tesselationEntity = sm.createTessellation("TesselationEntity", 6);
         SceneNode tesselationNode = sm.getRootSceneNode().createChildSceneNode("TesselationNode");
@@ -752,91 +729,6 @@ public class MyGame extends VariableFrameRateGame {
         tesselationNode.moveDown(9.5f);
         tesselationEntity.setHeightMap(eng, "sunheight.jpeg");
         tesselationEntity.setTexture(eng, "sun.jpeg");
-    }
-
-    private ManualObject makeXIndicator(Engine eng, SceneManager sm) throws IOException {
-        ManualObject lineX = sm.createManualObject("xLine");
-        ManualObjectSection lineXSect = lineX.createManualSection("xLineSection");
-        lineX.setGpuShaderProgram(sm.getRenderSystem().getGpuShaderProgram(GpuShaderProgram.Type.RENDERING));
-
-        float[] vertices = new float[]{
-                0.0f, 0.0f, 0.0f, //origin
-                5.0f, 0.0f, 0.0f, //X-Axis
-        };
-        int[] indices = new int[]{0, 1};
-        IntBuffer indexBuf = BufferUtil.directIntBuffer(indices);
-
-        FloatBuffer vertBuffer = BufferUtil.directFloatBuffer(vertices);
-
-        lineXSect.setVertexBuffer(vertBuffer);
-        lineXSect.setIndexBuffer(indexBuf);
-
-        Texture tex = eng.getTextureManager().getAssetByPath("red.jpeg");
-        TextureState texState = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
-        texState.setTexture(tex);
-        FrontFaceState faceState = (FrontFaceState) sm.getRenderSystem().createRenderState(RenderState.Type.FRONT_FACE);
-
-        lineX.setDataSource(Renderable.DataSource.INDEX_BUFFER);
-        lineX.setRenderState(texState);
-        lineX.setRenderState(faceState);
-        return lineX;
-    }
-
-    private ManualObject makeYIndicator(Engine eng, SceneManager sm) throws IOException {
-        ManualObject lineX = sm.createManualObject("yLine");
-        ManualObjectSection lineXSect = lineX.createManualSection("yLineSection");
-        lineX.setGpuShaderProgram(sm.getRenderSystem().getGpuShaderProgram(GpuShaderProgram.Type.RENDERING));
-
-        float[] vertices = new float[]{
-                0.0f, 0.0f, 0.0f, //origin
-                0.0f, 5.0f, 0.0f, //Z-Axis
-        };
-        int[] indices = new int[]{0, 1};
-        IntBuffer indexBuf = BufferUtil.directIntBuffer(indices);
-
-        FloatBuffer vertBuffer = BufferUtil.directFloatBuffer(vertices);
-
-
-        lineXSect.setVertexBuffer(vertBuffer);
-        lineXSect.setIndexBuffer(indexBuf);
-
-        Texture tex = eng.getTextureManager().getAssetByPath("green.png");
-        TextureState texState = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
-        texState.setTexture(tex);
-        FrontFaceState faceState = (FrontFaceState) sm.getRenderSystem().createRenderState(RenderState.Type.FRONT_FACE);
-
-        lineX.setDataSource(Renderable.DataSource.INDEX_BUFFER);
-        lineX.setRenderState(texState);
-        lineX.setRenderState(faceState);
-        return lineX;
-    }
-
-    private ManualObject makeZIndicator(Engine eng, SceneManager sm) throws IOException {
-        ManualObject lineX = sm.createManualObject("zLine");
-        ManualObjectSection lineXSect = lineX.createManualSection("zLineSection");
-        lineX.setGpuShaderProgram(sm.getRenderSystem().getGpuShaderProgram(GpuShaderProgram.Type.RENDERING));
-
-        float[] vertices = new float[]{
-                0.0f, 0.0f, 0.0f, //origin
-                0.0f, 0.0f, 5.0f, //Y-Axis
-        };
-        int[] indices = new int[]{0, 1};
-        IntBuffer indexBuf = BufferUtil.directIntBuffer(indices);
-
-        FloatBuffer vertBuffer = BufferUtil.directFloatBuffer(vertices);
-
-        lineXSect.setVertexBuffer(vertBuffer);
-        lineXSect.setIndexBuffer(indexBuf);
-
-        Texture tex = eng.getTextureManager().getAssetByPath("blue.jpeg");
-        TextureState texState = (TextureState) sm.getRenderSystem().createRenderState(RenderState.Type.TEXTURE);
-        texState.setTexture(tex);
-        FrontFaceState faceState = (FrontFaceState) sm.getRenderSystem().createRenderState(RenderState.Type.FRONT_FACE);
-
-        lineX.setDataSource(Renderable.DataSource.INDEX_BUFFER);
-        lineX.setRenderState(texState);
-        lineX.setRenderState(faceState);
-        return lineX;
     }
 
     private void makeParts() throws IOException {
@@ -962,7 +854,7 @@ public class MyGame extends VariableFrameRateGame {
         alone = false;
 
         String file = "sphere.obj";
-        float scale = type.equals("part") ? .25f : 1.2f;
+//        float scale = type.equals("part") ? .25f : 1.0f;
 
         switch(type) {
             case "astronaut": file = "astronaut.obj"; break;
@@ -986,7 +878,7 @@ public class MyGame extends VariableFrameRateGame {
             ghostNode = sm.getRootSceneNode().createChildSceneNode(ghostEntity.getName() + "Node");
             ghostEntity.setPrimitive(Primitive.TRIANGLES);
             ghostNode.attachObject(ghostEntity);
-            ghostNode.setLocalScale(scale, scale, scale);
+//            ghostNode.setLocalScale(scale, scale, scale);
         }
         
             GhostAvatar ghostAvatar = new GhostAvatar(uuid, ghostNode, ghostEntity);
@@ -1015,6 +907,10 @@ public class MyGame extends VariableFrameRateGame {
     }
 
     public void removeGhostAvatar(GhostAvatar avatar){
+        SceneNode node = avatar.getNode();
+        if(node.getName().startsWith("ufo")) {
+            deathSimManager.performDeathSim(node);
+        }
         sm.destroySceneNode(avatar.getNode());
     }
 

@@ -148,7 +148,7 @@ public class ProtocolClient extends GameConnectionClient {
     }
 
     private void removeGhostAvatar(UUID ghostID) throws IOException {
-        game.removeGhostAvatar(ghostAvatars.get(ghostID));
+        game.removeGhostAvatar(ghostAvatars.remove(ghostID));
     }
 
 
@@ -161,8 +161,7 @@ public class ProtocolClient extends GameConnectionClient {
     {
         try {
             sendPacket("join," + id.toString());
-        }
-        catch (IOException e) { e.printStackTrace(); }
+        } catch (IOException e) { e.printStackTrace(); }
     }
 
     // send create
