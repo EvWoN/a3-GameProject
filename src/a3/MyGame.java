@@ -211,7 +211,7 @@ public class MyGame extends VariableFrameRateGame {
             deathSimManager.updateInstances(elapsedTimeMillis);
             pickupItems();
             checkItems();
-            moveEnemies();
+            //moveEnemies();
             if (Math.round(totalTime / 1000) % 8 == 0) {
                 if (!placed) {
                     try {
@@ -898,8 +898,8 @@ public class MyGame extends VariableFrameRateGame {
     }
 
     public boolean updateGhostAvatar(GhostAvatar avatar, Vector3 position, Vector3 heading){
-        System.out.println("\\u003B[31mAVATAR:\\u003B[0m" + avatar + " POSI:" + position + " HEADING:" + heading);
-        System.out.println("Avatar is in scene? " + avatar.getNode());
+        //System.out.println("\\u003B[31mAVATAR:\\u003B[0m" + avatar + " POSI:" + position + " HEADING:" + heading);
+        //System.out.println("Avatar is in scene? " + avatar.getNode());
         avatar.setPosition(position);
         avatar.setHeading(heading);
         return avatar.getNode().isInSceneGraph();

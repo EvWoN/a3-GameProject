@@ -8,6 +8,7 @@ import ray.rml.Vector3f;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.UUID;
 
@@ -29,7 +30,7 @@ public class ProtocolClient extends GameConnectionClient {
     @Override
     protected void processPacket(Object o) {
         String message = (String) o;
-        System.out.println("Receiving packet: " + o);
+        //System.out.println("Receiving packet: " + o);
         String[] msgTokens = message.split(",");
         if (msgTokens.length > 0) {
             // receive “join”
@@ -119,6 +120,28 @@ public class ProtocolClient extends GameConnectionClient {
                 try { updateGhostAvatar(ghostID, animState); }
                 catch (Exception e) { System.out.println("Error updating animation ghost avatar"); }
             }
+            if(msgTokens[0].compareTo("enemymove") == 0) {
+                String[] moves = message.split(";");
+                String[] msg;
+                UUID enemyID;
+                Vector3 pos, head;
+                for(String move : moves) {
+                    msg = move.split(",");
+                    enemyID = UUID.fromString(msg[1]);
+                    pos = Vector3f.createFrom(
+                            Float.parseFloat(msg[2]),
+                            Float.parseFloat(msg[3]),
+                            Float.parseFloat(msg[4])
+                    );
+                    head = Vector3f.createFrom(
+                            Float.parseFloat(msg[5]),
+                            Float.parseFloat(msg[6]),
+                            Float.parseFloat(msg[7])
+                    );
+                    try { updateGhostAvatar(enemyID, pos, head); }
+                    catch (IOException e) { e.printStackTrace(); }
+                }
+            }
         }
     }
 
@@ -132,7 +155,7 @@ public class ProtocolClient extends GameConnectionClient {
     }
 
     private void updateGhostAvatar(UUID ghostID, Vector3 ghostPosition, Vector3 ghostHeading) throws IOException {
-        System.out.println("Ghost Received: " + ghostID + "\nHashtable on ghost update: " + ghostAvatars);
+        //System.out.println("Ghost Received: " + ghostID + "\nHashtable on ghost update: " + ghostAvatars);
         GhostAvatar ghostAvatar = ghostAvatars.get(ghostID);
         game.updateGhostAvatar(ghostAvatar, ghostPosition, ghostHeading);
     }
