@@ -481,7 +481,7 @@ public class MyGame extends VariableFrameRateGame {
                 im.associateAction(
                         c,
                         Component.Identifier.Button._1,
-                        throwItemAction,
+                        fireAction,
                         InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY
                 );
                 
