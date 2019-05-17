@@ -8,7 +8,6 @@ import ray.rml.Vector3f;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetAddress;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.UUID;
 
@@ -29,117 +28,133 @@ public class ProtocolClient extends GameConnectionClient {
 
     @Override
     protected void processPacket(Object o) {
-        String message = (String) o;
-        //System.out.println("Receiving packet: " + o);
-        String[] msgTokens = message.split(",");
-        if (msgTokens.length > 0) {
-            // receive “join”
-            // format: join, success/join, failure
-            if (msgTokens[0].compareTo("join") == 0)
-            {
-                if (msgTokens[1].compareTo("success") == 0) {
-                    game.setIsConnected(true);
-                    sendCreateMessage(id.toString(),"astronaut", game.getPlayerPosition(), game.getPlayerHeading());
+        if(o != null) {
+            String message = (String) o;
+            //System.out.println("Receiving packet: " + o);
+            String[] msgTokens = message.split(",");
+            if (msgTokens.length > 0) {
+                // receive “join”
+                // format: join, success/join, failure
+                if (msgTokens[0].compareTo("join") == 0) {
+                    if (msgTokens[1].compareTo("success") == 0) {
+                        game.setIsConnected(true);
+                        sendCreateMessage("astronaut", game.getPlayerPosition(), game.getPlayerHeading());
+                    }
+                    if (msgTokens[1].compareTo("failure") == 0) {
+                        game.setIsConnected(false);
+                    }
                 }
-                if (msgTokens[1].compareTo("failure") == 0) {
-                    game.setIsConnected(false);
+                // receive “bye”
+                // format: bye, remoteId
+                if (msgTokens[0].compareTo("bye") == 0) {
+                    UUID ghostID = UUID.fromString(msgTokens[1]);
+                    try {
+                        removeGhostAvatar(ghostID);
+                    } catch (IOException e) {
+                        System.out.println("Error removing ghost avatar.");
+                    }
                 }
-            }
-            // receive “bye”
-            // format: bye, remoteId
-            if (msgTokens[0].compareTo("bye") == 0)
-            {
-                UUID ghostID = UUID.fromString(msgTokens[1]);
-                try { removeGhostAvatar(ghostID); }
-                catch (IOException e) { System.out.println("Error removing ghost avatar."); }
-            }
-            // receive “dsfr”
-            // format: dsfr, clientid, remoteId, type, x, y, z, u, v, n
-            if (msgTokens[0].compareTo("dsfr") == 0) {
-                UUID ghostID = UUID.fromString(msgTokens[1]);
-                String type = msgTokens[3];
-                Vector3 ghostPosition = Vector3f.createFrom(
-                        Float.parseFloat(msgTokens[4]),
-                        Float.parseFloat(msgTokens[5]),
-                        Float.parseFloat(msgTokens[6]));
-                Vector3 ghostHeading = Vector3f.createFrom(
-                        Float.parseFloat(msgTokens[7]),
-                        Float.parseFloat(msgTokens[8]),
-                        Float.parseFloat(msgTokens[9]));
-                try {
-                    if(ghostAvatars.containsKey(ghostID)) updateGhostAvatar(ghostID, ghostPosition, ghostHeading);
-                    else createGhostAvatar(ghostID, type, ghostPosition, ghostHeading);
+                // receive “dsfr”
+                // format: dsfr, clientid, remoteId, type, x, y, z, u, v, n
+                if (msgTokens[0].compareTo("dsfr") == 0) {
+                    UUID ghostID = UUID.fromString(msgTokens[1]);
+                    String type = msgTokens[3];
+                    Vector3 ghostPosition = Vector3f.createFrom(
+                            Float.parseFloat(msgTokens[4]),
+                            Float.parseFloat(msgTokens[5]),
+                            Float.parseFloat(msgTokens[6]));
+                    Vector3 ghostHeading = Vector3f.createFrom(
+                            Float.parseFloat(msgTokens[7]),
+                            Float.parseFloat(msgTokens[8]),
+                            Float.parseFloat(msgTokens[9]));
+                    try {
+                        if (ghostAvatars.containsKey(ghostID)) updateGhostAvatar(ghostID, ghostPosition, ghostHeading);
+                        else createGhostAvatar(ghostID, type, ghostPosition, ghostHeading);
+                    } catch (IOException e) {
+                        System.out.println("Error creating/updating ghost avatar: " + e.getMessage());
+                    }
                 }
-                catch (IOException e) { System.out.println("Error creating/updating ghost avatar: " + e.getMessage()); }
-            }
-            // receive “create…”
-            // format: create, itemId, type, x, y, z, u, v, n
-            if (msgTokens[0].compareTo("create") == 0)
-            {
-                UUID ghostID = UUID.fromString(msgTokens[1]);
-                String type = msgTokens[2];
-                Vector3 ghostPosition = Vector3f.createFrom(
-                        Float.parseFloat(msgTokens[3]),
-                        Float.parseFloat(msgTokens[4]),
-                        Float.parseFloat(msgTokens[5]));
-                Vector3 ghostHeading = Vector3f.createFrom(
-                        Float.parseFloat(msgTokens[6]),
-                        Float.parseFloat(msgTokens[7]),
-                        Float.parseFloat(msgTokens[8]));
-                try { createGhostAvatar(ghostID, type, ghostPosition, ghostHeading); }
-                catch (IOException e) { System.out.println("Error creating ghost avatar"); }
-            }
-            // rec. “wants…”
-            // format: wsds, clientid
-            if (msgTokens[0].compareTo("wsds") == 0)
-            {
-                UUID clientId = UUID.fromString(msgTokens[1]);
-                String type = "astronaut";
-                sendDetailsForMessage(clientId, type, game.getPlayerPosition(), game.getPlayerHeading());
-            }
-            // rec. “move...”
-            // formate: move, clientid, x, y, z, u, v, n
-            if (msgTokens[0].compareTo("move") == 0) {
-                UUID ghostID = UUID.fromString(msgTokens[1]);
-                Vector3 ghostPosition = Vector3f.createFrom(
-                        Float.parseFloat(msgTokens[2]),
-                        Float.parseFloat(msgTokens[3]),
-                        Float.parseFloat(msgTokens[4]));
-                Vector3 ghostHeading = Vector3f.createFrom(
-                        Float.parseFloat(msgTokens[5]),
-                        Float.parseFloat(msgTokens[6]),
-                        Float.parseFloat(msgTokens[7]));
-                try { updateGhostAvatar(ghostID, ghostPosition, ghostHeading); }
-                catch (IOException e) { System.out.println("Error updating move ghost avatar"); }
-            }
-            //rec. "anim..."
-            //formats: anim, clientid, x, y, z,
-            if (msgTokens[0].compareTo("anim") == 0) {
-                UUID ghostID = UUID.fromString(msgTokens[1]);
-                String animState = msgTokens[2];
-                try { updateGhostAvatar(ghostID, animState); }
-                catch (Exception e) { System.out.println("Error updating animation ghost avatar"); }
-            }
-            if(msgTokens[0].compareTo("enemymove") == 0) {
-                String[] moves = message.split(";");
-                String[] msg;
-                UUID enemyID;
-                Vector3 pos, head;
-                for(String move : moves) {
-                    msg = move.split(",");
-                    enemyID = UUID.fromString(msg[1]);
-                    pos = Vector3f.createFrom(
-                            Float.parseFloat(msg[2]),
-                            Float.parseFloat(msg[3]),
-                            Float.parseFloat(msg[4])
-                    );
-                    head = Vector3f.createFrom(
-                            Float.parseFloat(msg[5]),
-                            Float.parseFloat(msg[6]),
-                            Float.parseFloat(msg[7])
-                    );
-                    try { updateGhostAvatar(enemyID, pos, head); }
-                    catch (IOException e) { e.printStackTrace(); }
+                // receive “create…”
+                // format: create, itemId, type, x, y, z, u, v, n
+                if (msgTokens[0].compareTo("create") == 0) {
+                    UUID ghostID = UUID.fromString(msgTokens[1]);
+                    String type = msgTokens[2];
+                    Vector3 ghostPosition = Vector3f.createFrom(
+                            Float.parseFloat(msgTokens[3]),
+                            Float.parseFloat(msgTokens[4]),
+                            Float.parseFloat(msgTokens[5]));
+                    Vector3 ghostHeading = Vector3f.createFrom(
+                            Float.parseFloat(msgTokens[6]),
+                            Float.parseFloat(msgTokens[7]),
+                            Float.parseFloat(msgTokens[8]));
+                    try {
+                        System.out.println("EnemyMove: " + ghostID);
+                        createGhostAvatar(ghostID, type, ghostPosition, ghostHeading);
+                    } catch (IOException e) {
+                        System.out.println("Error creating ghost avatar");
+                    }
+                }
+                // rec. “wants…”
+                // format: wsds, clientid
+                if (msgTokens[0].compareTo("wsds") == 0) {
+                    UUID clientId = UUID.fromString(msgTokens[1]);
+                    String type = "astronaut";
+                    sendDetailsForMessage(clientId, type, game.getPlayerPosition(), game.getPlayerHeading());
+                }
+                // rec. “move...”
+                // formate: move, clientid, x, y, z, u, v, n
+                if (msgTokens[0].compareTo("move") == 0) {
+                    UUID ghostID = UUID.fromString(msgTokens[1]);
+                    Vector3 ghostPosition = Vector3f.createFrom(
+                            Float.parseFloat(msgTokens[2]),
+                            Float.parseFloat(msgTokens[3]),
+                            Float.parseFloat(msgTokens[4]));
+                    Vector3 ghostHeading = Vector3f.createFrom(
+                            Float.parseFloat(msgTokens[5]),
+                            Float.parseFloat(msgTokens[6]),
+                            Float.parseFloat(msgTokens[7]));
+                    try {
+                        updateGhostAvatar(ghostID, ghostPosition, ghostHeading);
+                    } catch (IOException e) {
+                        System.out.println("Error updating move ghost avatar");
+                    }
+                }
+                //rec. "anim..."
+                //formats: anim, clientid, x, y, z,
+                if (msgTokens[0].compareTo("anim") == 0) {
+                    UUID ghostID = UUID.fromString(msgTokens[1]);
+                    String animState = msgTokens[2];
+                    try {
+                        updateGhostAvatar(ghostID, animState);
+                    } catch (Exception e) {
+                        System.out.println("Error updating animation ghost avatar");
+                    }
+                }
+                if (msgTokens[0].compareTo("enemymove") == 0) {
+                    String[] moves = message.split(";");
+                    String[] msg;
+                    UUID enemyID;
+                    Vector3 pos, head;
+                    for (String move : moves) {
+                        msg = move.split(",");
+                        enemyID = UUID.fromString(msg[1]);
+                        pos = Vector3f.createFrom(
+                                Float.parseFloat(msg[2]),
+                                Float.parseFloat(msg[3]),
+                                Float.parseFloat(msg[4])
+                        );
+                        head = Vector3f.createFrom(
+                                Float.parseFloat(msg[5]),
+                                Float.parseFloat(msg[6]),
+                                Float.parseFloat(msg[7])
+                        );
+                        System.out.println("EnemyMove: " + enemyID);
+                        try {
+                            updateGhostAvatar(enemyID, pos, head);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
                 }
             }
         }
@@ -189,12 +204,11 @@ public class ProtocolClient extends GameConnectionClient {
 
     // send create
     // format: create, clientId, itemId, type, x, y, z, u, v, n
-    public void sendCreateMessage(String name, String type, Vector3 pos, Vector3 head) {
+    public void sendCreateMessage( String type, Vector3 pos, Vector3 head) {
         try {
             String message =
                     "create," +
                     id.toString() + ","  +
-                    name + "," +
                     type + "," +
                     pos.x() + ","  +
                     pos.y() + ","  +
@@ -296,6 +310,44 @@ public class ProtocolClient extends GameConnectionClient {
      * @param uuidNode
      */
     public void sendDestroyClientNode(UUID uuidNode){
-        String msg = "remove" + id.toString() + uuidNode;
+        try {
+            String msg = "destroyNode," + id.toString() + "," + uuidNode;
+            sendPacket(msg);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void sendCreateClientNode(UUID uuidNode, String type, Vector3 position, Vector3 heading){
+        try{
+            String msg = "createNode," + id.toString() +
+                    "," + uuidNode +
+                    "," + type +
+                    "," + position.x() +
+                    "," + position.y() +
+                    "," + position.z() +
+                    "," + heading.x() +
+                    "," + heading.y() +
+                    "," + heading.z();
+            sendPacket(msg);
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void sendMoveClientNode(UUID uuidNode, Vector3 position, Vector3 heading){
+        try{
+            String msg = "moveNode," + id.toString() +
+                    "," + uuidNode +
+                    "," + position.x() +
+                    "," + position.y() +
+                    "," + position.z() +
+                    "," + heading.x() +
+                    "," + heading.y() +
+                    "," + heading.z();
+            sendPacket(msg);
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

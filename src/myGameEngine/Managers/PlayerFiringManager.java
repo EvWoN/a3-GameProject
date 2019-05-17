@@ -80,6 +80,7 @@ public class PlayerFiringManager {
             lazorNode.setLocalPosition(worldPosition);
             lazorNode.lookAt(newPosition);
             lazorNode.setLocalPosition(newPosition);
+            protocolClient.sendCreateClientNode(uuid,"lazor",lazorNode.getWorldPosition(),lazorNode.getWorldForwardAxis());
         }
 
         public boolean isAlive(){
@@ -93,6 +94,7 @@ public class PlayerFiringManager {
                 destroy();
             } else {
                 lazorNode.setLocalPosition(lazorNode.getWorldPosition().add(lazorNode.getWorldForwardAxis().div(lazorVelocity)));
+                protocolClient.sendMoveClientNode(uuid,lazorNode.getWorldPosition(),lazorNode.getWorldForwardAxis());
             }
         }
 

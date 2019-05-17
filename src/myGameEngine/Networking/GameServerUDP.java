@@ -14,11 +14,14 @@ import java.io.Serializable;
 import java.net.InetAddress;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
 
 public class GameServerUDP extends GameConnectionServer<UUID> {
 
     private HashMap<UUID, Vector3> lastKnownPositions;
     private HashMap<UUID, Enemy> enemyList;
+    //TODO this should be expanded to have a value that is a class container with owner UUID and position
+    private HashMap<UUID, Vector3> astronautLazors; //Player lazors
 
     private Random rand;
     private ScriptEngine se;
@@ -35,6 +38,7 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
     public GameServerUDP(int localPort) throws IOException {
         super(localPort, ProtocolType.UDP);
         lastKnownPositions = new HashMap<>();
+        astronautLazors = new HashMap<>();
         rand = new Random();
         lastTime = System.nanoTime();
         totalTime = 0;
@@ -133,7 +137,7 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
         });
         if(moveMessages.size() > 0)
         {
-            //System.out.println("\n" + moveMessages);
+            System.out.println("\n" + moveMessages);
             sendEnemyMoveMessage(moveMessages);
         }
     }
@@ -196,6 +200,12 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
                     System.out.println("Client connected, UUID: " + clientID);
                     addClient(ci, clientID);
                     sendJoinedMessage(clientID, true);
+                    enemyList.forEach(new BiConsumer<UUID, Enemy>() {
+                        @Override
+                        public void accept(UUID uuid, Enemy enemy) {
+                            sendEnemy(enemy,clientID);
+                        }
+                    });
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -204,10 +214,9 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
             // format: create, clientId, itemId, type, x, y, z, u, v, n
             if (msgTokens[0].compareTo("create") == 0) {
                 UUID clientID = UUID.fromString(msgTokens[1]);
-                UUID itemID = UUID.fromString(msgTokens[2]);
-                String type = msgTokens[3];
-                String[] pos = {msgTokens[4], msgTokens[5], msgTokens[6]};
-                String[] head = { msgTokens[7], msgTokens[8], msgTokens[9] };
+                String type = msgTokens[2];
+                String[] pos = {msgTokens[3], msgTokens[4], msgTokens[5]};
+                String[] head = { msgTokens[6], msgTokens[7], msgTokens[8] };
                 if(!lastKnownPositions.containsKey(clientID))
                     lastKnownPositions.put(
                         clientID,
@@ -217,7 +226,7 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
                             Float.parseFloat(msgTokens[6])
                         )
                     );
-                sendCreateMessages(clientID, itemID, type, pos, head);
+                sendCreateMessages(clientID, type, pos, head);
                 sendWantsDetailsMessages(clientID);
             }
             // case where server receives a BYE message
@@ -251,18 +260,52 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
                         ));
                 sendMoveMessages(clientID, pos, head);
             }
-            if (msgTokens[0].compareTo("moveItem") == 0) {
-                UUID clientID = UUID.fromString(msgTokens[1]);
-                UUID itemID = UUID.fromString(msgTokens[2]);
-                String[] pos = { msgTokens[3], msgTokens[4], msgTokens[5] };
-                String[] head = { msgTokens[6], msgTokens[7], msgTokens[8] };
-                System.out.println("itemId: " + itemID + "\ntoString: " + itemID.toString());
-                sendMoveItemMessages(clientID, itemID, pos, head);
-            }
             if(msgTokens[0].compareTo("anim") == 0){
                 UUID clientID = UUID.fromString(msgTokens[1]);
                 String animationState = msgTokens[2];
                 sendAnimMessage(clientID,animationState);
+            }
+            if (msgTokens[0].compareTo("createNode") == 0) {
+                UUID clientID = UUID.fromString(msgTokens[1]);
+                UUID nodeID = UUID.fromString(msgTokens[2]);
+                String type = msgTokens[3];
+                String[] pos = { msgTokens[4], msgTokens[5], msgTokens[6] };
+                String[] head = { msgTokens[7], msgTokens[8], msgTokens[9] };
+                //TODO need to log this node
+                if(!astronautLazors.containsKey(nodeID)) {
+                    astronautLazors.put(nodeID, Vector3f.createFrom(
+                            Float.parseFloat(pos[0]),
+                            Float.parseFloat(pos[1]),
+                            Float.parseFloat(pos[2])
+                    ));
+                }
+                sendCreateMessages(clientID, nodeID, type, pos, head);
+            }
+
+            if(msgTokens[0].compareTo("moveNode") == 0){
+                UUID clientID = UUID.fromString(msgTokens[1]);
+                UUID nodeID = UUID.fromString(msgTokens[2]);
+                String[] pos = { msgTokens[3], msgTokens[4], msgTokens[5] };
+                String[] head = { msgTokens[6], msgTokens[7], msgTokens[8] };
+                //TODO need to log this node
+                if(astronautLazors.containsKey(nodeID)) {
+                    astronautLazors.put(nodeID, Vector3f.createFrom(
+                            Float.parseFloat(pos[0]),
+                            Float.parseFloat(pos[1]),
+                            Float.parseFloat(pos[2])
+                    ));
+                }
+                sendMoveMessages(clientID, nodeID, pos, head);
+            }
+
+            if(msgTokens[0].compareTo("destroyNode") == 0){
+                UUID clientID = UUID.fromString(msgTokens[1]);
+                UUID nodeID = UUID.fromString(msgTokens[2]);
+                //TODO need to log this node
+                if(astronautLazors.containsKey(nodeID)) {
+                    astronautLazors.remove(nodeID);
+                }
+                sendByeMessages(clientID, nodeID);
             }
         }
     }
@@ -289,10 +332,10 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
     }
 
     // format: create, remoteId, x, y, z, u, v, n
-    public void sendCreateMessages(UUID clientID, UUID itemID, String type, String[] position, String[] head) {
+    public void sendCreateMessages(UUID clientID, String type, String[] position, String[] head) {
         try {
             String message =    "create,"  +
-                                itemID.toString() + "," +
+                                clientID.toString() + "," +
                                 type + "," +
                                 position[0] + "," +
                                 position[1] + "," +
@@ -300,6 +343,23 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
                                 head[0] + "," +
                                 head[1] + "," +
                                 head[2] + ",";
+            forwardPacketToAll(message, clientID);
+        }
+        catch (IOException e) { e.printStackTrace(); }
+    }
+
+    //FOR NODE
+    public void sendCreateMessages(UUID clientID, UUID nodeID, String type, String[] position, String[] head) {
+        try {
+            String message =    "create,"  +
+                    nodeID.toString() + "," +
+                    type + "," +
+                    position[0] + "," +
+                    position[1] + "," +
+                    position[2] + "," +
+                    head[0] + "," +
+                    head[1] + "," +
+                    head[2] + ",";
             forwardPacketToAll(message, clientID);
         }
         catch (IOException e) { e.printStackTrace(); }
@@ -362,19 +422,19 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
         catch (IOException e) { e.printStackTrace(); }
     }
 
-    public void sendMoveItemMessages(UUID clientID, UUID itemID, String[] position, String[] head) {
+    //FOR NODE
+    public void sendMoveMessages(UUID clientID, UUID nodeID, String[] position, String[] head){
         try {
-            String message =
-                    "move," +
-                    itemID.toString() + "," +
+            String message =    "move," +
+                    nodeID.toString() + "," +
                     position[0] + "," +
                     position[1] + "," +
                     position[2] + "," +
                     head[0] + "," +
                     head[1] + "," +
                     head[2];
-            System.out.println(message);
             forwardPacketToAll(message, clientID);
+
         }
         catch (IOException e) { e.printStackTrace(); }
     }
@@ -383,6 +443,16 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
         try {
             String message =    "bye," +
                                 clientID.toString();
+            forwardPacketToAll(message, clientID);
+        }
+        catch (IOException e) { e.printStackTrace(); }
+    }
+
+    //FOR NODE
+    public void sendByeMessages(UUID clientID, UUID nodeID) {
+        try {
+            String message =    "bye," +
+                    nodeID.toString();
             forwardPacketToAll(message, clientID);
         }
         catch (IOException e) { e.printStackTrace(); }
@@ -404,6 +474,26 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
                     head.y() + "," +
                     head.z() + ",";
             super.sendPacketToAll(message);
+        }
+        catch (IOException e) { e.printStackTrace(); }
+    }
+
+    public void sendEnemy(Enemy enemy, UUID clientUUID) {
+        UUID itemID = enemy.getUUID();
+        String type = "ufo";
+        Vector3 position = enemy.getLocation();
+        Vector3 head = enemy.getHeading();
+        try {
+            String message =    "create,"  +
+                    itemID.toString() + "," +
+                    type + "," +
+                    position.x() + "," +
+                    position.y() + "," +
+                    position.z() + "," +
+                    head.x() + "," +
+                    head.y() + "," +
+                    head.z() + ",";
+            super.sendPacket(message,clientUUID);
         }
         catch (IOException e) { e.printStackTrace(); }
     }

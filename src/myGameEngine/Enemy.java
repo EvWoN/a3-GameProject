@@ -1,6 +1,5 @@
 package myGameEngine;
 
-import ray.rage.scene.SceneNode;
 import ray.rml.Vector3;
 import ray.rml.Vector3f;
 
@@ -46,14 +45,14 @@ public class Enemy {
                 orbiting = true;
             }
         }
-        else if(ammo > 0) {
-            location = orbitDest;
+//        else if(ammo > 0) {
+//            location = orbitDest;
 /*            nextAngle = angle - calcAngle(orbitDest);
             if(nextAngle >= 360f) nextAngle -= 360f;
             else if(nextAngle < 0.0f) nextAngle += 360f;
             if(nextAngle > 0.0f) { location = calcPos(nextAngle, ORBIT); }
             else location = orbitDest;*/
-        }
+//        }
         /*else {
             nextMove = targetPos.sub(location);
             nextMove = nextMove.mult(SPEED / nextMove.length());

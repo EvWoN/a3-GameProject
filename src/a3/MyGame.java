@@ -861,6 +861,7 @@ public class MyGame extends VariableFrameRateGame {
             case "astronaut": file = "astronaut.obj"; break;
             case "ufo": file = "Ufo.obj"; break;
             case "part": file = "Thruster.obj"; break;
+            case "lazor": file = "lazor.obj"; break;
         }
         
         Entity ghostEntity;
@@ -874,6 +875,14 @@ public class MyGame extends VariableFrameRateGame {
             ghostNode.scale(0.3f, 0.3f, 0.3f);
             ghostNode.setLocalRotation(UP);
             setAstronautTexture(ghostEntity);
+        } else if(type.equals("lazor")){
+            ghostEntity = sm.createEntity(type + uuid.toString(), file);
+            ghostNode = sm.getRootSceneNode().createChildSceneNode(ghostEntity.getName() + "Node");
+            SceneNode lazorNode = ghostNode.createChildSceneNode(ghostEntity.getName()+"Lazor");
+            ghostEntity.setPrimitive(Primitive.TRIANGLES);
+            lazorNode.attachObject(ghostEntity);
+            lazorNode.moveUp(.5f);
+            lazorNode.setLocalScale(3f, 3f, 3f);
         } else {
             ghostEntity = sm.createEntity(type + uuid.toString(), file);
             ghostNode = sm.getRootSceneNode().createChildSceneNode(ghostEntity.getName() + "Node");
@@ -899,20 +908,23 @@ public class MyGame extends VariableFrameRateGame {
             return ghostAvatar;
     }
 
-    public boolean updateGhostAvatar(GhostAvatar avatar, Vector3 position, Vector3 heading){
+    public void updateGhostAvatar(GhostAvatar avatar, Vector3 position, Vector3 heading){
         //System.out.println("\\u003B[31mAVATAR:\\u003B[0m" + avatar + " POSI:" + position + " HEADING:" + heading);
         //System.out.println("Avatar is in scene? " + avatar.getNode());
-        avatar.setPosition(position);
-        avatar.setHeading(heading);
-        return avatar.getNode().isInSceneGraph();
+        if(avatar != null) {
+            avatar.setPosition(position);
+            avatar.setHeading(heading);
+        }
     }
 
     public void removeGhostAvatar(GhostAvatar avatar){
-        SceneNode node = avatar.getNode();
-        if(node.getName().startsWith("ufo")) {
-            deathSimManager.performDeathSim(node);
+        if(avatar != null) {
+            SceneNode node = avatar.getNode();
+            if (node.getName().startsWith("ufo")) {
+                deathSimManager.performDeathSim(node);
+            }
+            sm.destroySceneNode(avatar.getNode());
         }
-        sm.destroySceneNode(avatar.getNode());
     }
 
     private void setAstronautTexture(Entity astronaut) {
