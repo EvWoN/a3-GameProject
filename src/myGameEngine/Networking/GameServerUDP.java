@@ -127,7 +127,31 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
                 sendEnemy(enemy);
             }
         }
-        else addedEnemy = false;/*
+        else addedEnemy = false;
+
+        LinkedList<Enemy> toRemove = new LinkedList<>();
+        astronautLazors.forEach(new BiConsumer<UUID, Vector3>() {
+            @Override
+            public void accept(UUID uuid, Vector3 vector3) {
+                enemyList.forEach(new BiConsumer<UUID, Enemy>() {
+                    @Override
+                    public void accept(UUID uuid, Enemy enemy) {
+                        float v = enemy.getLocation().length() - vector3.length();
+                        if(v < .5f){
+                            if (!toRemove.contains(enemy)) {
+                                toRemove.add(enemy);
+                            }
+                        }
+                    }
+                });
+            }
+        });
+
+        for (Enemy enemy : toRemove) {
+            enemyList.remove(toRemove);
+            sendByeMessages(enemy.getUUID());
+        }
+
         enemyList.forEach((uuid, enemy) -> {
             UUID targ = closestTarget(enemy);
             if(targ != null) {
@@ -142,7 +166,7 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
         if(moveMessages.size() > 0)
         {
             sendEnemyMoveMessage(moveMessages);
-        }*/
+        }
     }
 
     private boolean tooClose(float hold) {

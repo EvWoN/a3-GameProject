@@ -68,7 +68,7 @@ public class Enemy {
         float targetAngle = (target.isZeroLength()) ? angle : calcAngle(target);
         targetPos = target;
         orbitDest = unit(target).mult(ORBIT);//calcPos((float) Math.toDegrees(targetAngle), ORBIT);
-        System.out.println("Target Angle: " + targetAngle + " TargetPos: " + targetPos + " Destination: " + orbitDest);
+//        System.out.println("Target Angle: " + targetAngle + " TargetPos: " + targetPos + " Destination: " + orbitDest);
     }
 
     public Vector3 getLocation() { return this.location; }

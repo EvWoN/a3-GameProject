@@ -13,6 +13,7 @@ import myGameEngine.actions.*;
 import myGameEngine.controller.OrbitCameraController;
 import net.java.games.input.Component;
 import net.java.games.input.Controller;
+import ray.audio.*;
 import ray.input.GenericInputManager;
 import ray.input.InputManager;
 import ray.networking.IGameConnection;
@@ -575,7 +576,7 @@ public class MyGame extends VariableFrameRateGame {
         makeHeightMap();
         processNetworking(eng.getElapsedTimeMillis());
         deathSimManager = new UFODeathSimManager(physicsEngine,sm,8000f);
-        //initSound();
+//        initSound();
         System.out.println(isClientConnected);
     }
 
