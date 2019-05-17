@@ -246,6 +246,10 @@ public class ProtocolClient extends GameConnectionClient {
         catch (IOException e) { e.printStackTrace(); }
     }
 
+    public void sendMove(){
+
+    }
+
     @Override
     public void sendPacket(Serializable object) throws IOException {
         //System.out.println("SendingPackage: " + object);
@@ -262,5 +266,13 @@ public class ProtocolClient extends GameConnectionClient {
             sendPacket(message);
         }
         catch (IOException e) { e.printStackTrace(); }
+    }
+
+    /**
+     * Sends a destruction message of a networked client node
+     * @param uuidNode
+     */
+    public void sendDestroyClientNode(UUID uuidNode){
+        String msg = "remove" + id.toString() + uuidNode;
     }
 }

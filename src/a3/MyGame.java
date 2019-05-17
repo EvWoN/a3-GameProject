@@ -5,6 +5,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import myGameEngine.Managers.AstronautAnimator;
 import myGameEngine.Managers.Movement2DManager;
+import myGameEngine.Managers.PlayerFiringManager;
 import myGameEngine.Managers.UFODeathSimManager;
 import myGameEngine.Networking.GhostAvatar;
 import myGameEngine.Networking.ProtocolClient;
@@ -86,6 +87,7 @@ public class MyGame extends VariableFrameRateGame {
     private ArrayList<SceneNode> partsList;
 
     private UFODeathSimManager deathSimManager;
+    private PlayerFiringManager firingManager;
     private PhysicsEngine physicsEngine;
     private PhysicsObject ground;
 
@@ -167,9 +169,6 @@ public class MyGame extends VariableFrameRateGame {
             //TODO - boolean return on join
             //isClientConnected = true;
         }
-        mm.setClient(protClient);
-        animator.setClient(protClient);
-        
         //Bye on shutdown
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             protClient.sendByeMessage();
@@ -207,6 +206,7 @@ public class MyGame extends VariableFrameRateGame {
         }
         
         if(host.get()) {
+            firingManager.update(elapsedTimeMillis);
             updatePhysics(elapsedTimeMillis);
             deathSimManager.updateInstances(elapsedTimeMillis);
             pickupItems();
@@ -397,6 +397,7 @@ public class MyGame extends VariableFrameRateGame {
         ToggleMovementAction toggleMovementAction = new ToggleMovementAction(followGround, astronautNode);
         ToggleHostAction toggleHostAction = new ToggleHostAction(host);
         DeathSimTestAction deathSimTestAction = new DeathSimTestAction(this);
+        PlayerFireAction fireAction = new PlayerFireAction(firingManager);
         
 
         for (Controller c : controllers) {
@@ -429,7 +430,7 @@ public class MyGame extends VariableFrameRateGame {
                 im.associateAction(
                         c,
                         Component.Identifier.Key.SPACE,
-                        throwItemAction,
+                        fireAction,
                         InputManager.INPUT_ACTION_TYPE.ON_PRESS_ONLY
                 );
                 im.associateAction(
@@ -538,9 +539,7 @@ public class MyGame extends VariableFrameRateGame {
         plight.setSpecular(new Color(.2f, .2f, 1.0f));
         plight.setRange(10f);
         plight.setFalloffExponent(.2f);
-//        plight.setConeCutoffAngle(Degreef.createFrom(70));
         plight.setLinearAttenuation(.1f);
-//        plight.setConstantAttenuation();
         SceneNode plightNode = sm.getRootSceneNode().createChildSceneNode(plight.getName() + "Node");
         plightNode.attachObject(plight);
         plightNode.moveUp(1f);
@@ -562,10 +561,13 @@ public class MyGame extends VariableFrameRateGame {
         sm.setActiveSkyBox(startBox);
         
         initPhysicsSystem();
+        setupNetworking();
+        firingManager = new PlayerFiringManager(astronautNode,sm,protClient);
         createPhysicsWorld();
         setupControls(sm);
+        mm.setClient(protClient);
+        animator.setClient(protClient);
         makeHeightMap();
-        setupNetworking();
         processNetworking(eng.getElapsedTimeMillis());
         deathSimManager = new UFODeathSimManager(physicsEngine,sm,8000f);
         System.out.println(isClientConnected);
