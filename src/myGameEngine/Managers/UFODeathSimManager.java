@@ -87,7 +87,7 @@ public class UFODeathSimManager {
             attachPhysicsObject(rightThrusterNode);
             
             instances.add(new DeathSimInstance(simNode));
-            
+
         } catch (IOException e) {
             System.err.println("Was unable to create DeathSim for " + name);
             e.printStackTrace();

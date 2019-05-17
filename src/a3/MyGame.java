@@ -13,6 +13,7 @@ import myGameEngine.actions.*;
 import myGameEngine.controller.OrbitCameraController;
 import net.java.games.input.Component;
 import net.java.games.input.Controller;
+import ray.audio.*;
 import ray.input.GenericInputManager;
 import ray.input.InputManager;
 import ray.networking.IGameConnection;
@@ -61,6 +62,7 @@ public class MyGame extends VariableFrameRateGame {
     private SceneManager sm;
     private Movement2DManager mm;
     private AstronautAnimator animator;
+    private IAudioManager audioMgr;
     private String serverAddress;
     private int serverPort;
     private IGameConnection.ProtocolType serverProtocol;
@@ -94,6 +96,8 @@ public class MyGame extends VariableFrameRateGame {
     private Random rand;
 
     private float totalTime;
+
+    private Sound explosion;
 
     private int itemCount;
 
@@ -204,13 +208,14 @@ public class MyGame extends VariableFrameRateGame {
         if (followGround.getValue()) {
             updateVerticalPosition();
         }
-        
+
+        firingManager.update(elapsedTimeMillis);
+        updatePhysics(elapsedTimeMillis);
+        deathSimManager.updateInstances(elapsedTimeMillis);
+
         if(host.get()) {
-            firingManager.update(elapsedTimeMillis);
-            updatePhysics(elapsedTimeMillis);
-            deathSimManager.updateInstances(elapsedTimeMillis);
-            pickupItems();
-            checkItems();
+            //pickupItems();
+            //checkItems();
             //moveEnemies();
             if (Math.round(totalTime / 1000) % 8 == 0) {
                 if (!placed) {
@@ -231,6 +236,7 @@ public class MyGame extends VariableFrameRateGame {
         processNetworking(elapsedTimeMillis);
         animator.updateAnimationState(elapsedTimeMillis);
         mm.updateMovements();
+        //setEarParameters();
     }
 
     private void updatePhysics(float time) {
@@ -570,6 +576,7 @@ public class MyGame extends VariableFrameRateGame {
         makeHeightMap();
         processNetworking(eng.getElapsedTimeMillis());
         deathSimManager = new UFODeathSimManager(physicsEngine,sm,8000f);
+        //initSound();
         System.out.println(isClientConnected);
     }
 
@@ -663,6 +670,31 @@ public class MyGame extends VariableFrameRateGame {
 //        dlightNode.moveUp(2f);
         
         
+    }
+
+    private void initSound() {
+        AudioResource r1;
+
+        audioMgr = AudioManagerFactory.createAudioManager("ray.audio.joal.JOALAudioManager");
+        if(!audioMgr.initialize()) {
+            System.out.println("Error in audio initialization");
+            return;
+        }
+
+        r1 = audioMgr.createAudioResource("explosion.wav", AudioResourceType.AUDIO_SAMPLE);
+        explosion = new Sound(r1, SoundType.SOUND_EFFECT, 100, false);
+
+        explosion.initialize(audioMgr);
+
+        explosion.setMaxDistance(10.0f);
+        explosion.setMinDistance(0.5f);
+        explosion.setRollOff(5.0f);
+        setEarParameters();
+    }
+
+    private void setEarParameters() {
+        audioMgr.getEar().setLocation(camera.getPo());
+        audioMgr.getEar().setOrientation(camera.getFd(), Vector3f.createFrom(0,1,0));
     }
 
     private void runScript(ScriptEngine engine, String fileName) {
@@ -911,6 +943,8 @@ public class MyGame extends VariableFrameRateGame {
         SceneNode node = avatar.getNode();
         if(node.getName().startsWith("ufo")) {
             deathSimManager.performDeathSim(node);
+            //explosion.setLocation(node.getWorldPosition());
+            //explosion.play();
         }
         sm.destroySceneNode(avatar.getNode());
     }

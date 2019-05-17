@@ -89,7 +89,7 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
         totalTime += elapsedTime;
         timeSec = totalTime / 1000000000;
         lastTime = System.nanoTime();
-        if(lastKnownPositions.size() < 1) return;
+        if(lastKnownPositions.size() < 2) return;
         if (timeSec % UPDATESCRIPT == 0)
         {
             if(!updatedScripts) {
