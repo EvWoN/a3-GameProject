@@ -89,7 +89,7 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
         totalTime += elapsedTime;
         timeSec = totalTime / 1000000000;
         lastTime = System.nanoTime();
-        if(lastKnownPositions.size() < 2) return;
+        if(lastKnownPositions.size() < 1) return;
         if (timeSec % UPDATESCRIPT == 0)
         {
             if(!updatedScripts) {
@@ -100,13 +100,17 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
         }
         else updatedScripts = false;
         if (timeSec % SPAWNRATE == 0) {
-            if(!addedEnemy && enemyList.size() < 1) {
+            if(!addedEnemy && enemyList.size() < 3) {
                 System.out.println("Spawning an enemy.");
+                float hold;
+                do {
+                    hold = rand.nextInt(360) + rand.nextFloat();
+                } while(tooClose(hold));
                 addedEnemy = true;
                 UUID uuid = UUID.randomUUID();
                 Enemy enemy = new Enemy(
                         uuid,
-                        rand.nextInt(360) + rand.nextFloat(),
+                        hold,
                         AMMO,
                         ORBIT,
                         SPEED,
@@ -119,7 +123,7 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
                 sendEnemy(enemy);
             }
         }
-        else addedEnemy = false;
+        else addedEnemy = false;/*
         enemyList.forEach((uuid, enemy) -> {
             UUID targ = closestTarget(enemy);
             if(targ != null) {
@@ -135,7 +139,17 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
         {
             //System.out.println("\n" + moveMessages);
             sendEnemyMoveMessage(moveMessages);
-        }
+        }*/
+    }
+
+    private boolean tooClose(float hold) {
+        AtomicReference<Boolean> close = new AtomicReference<>(Boolean.FALSE);
+        enemyList.forEach((uuid, enemy) -> {
+            float diffA = Math.abs(hold - enemy.getAngle());
+            float diffB = Math.abs(360 - hold + enemy.getAngle());
+            if(diffA < 90.0f || diffB < 90.0f) close.set(Boolean.TRUE);
+        });
+        return close.get();
     }
 
     private UUID closestTarget(Enemy enemy) {

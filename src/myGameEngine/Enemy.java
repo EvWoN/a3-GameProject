@@ -76,6 +76,8 @@ public class Enemy {
 
     public UUID getUUID() { return this.id; }
 
+    public float getAngle() { return this.angle; }
+
     public Vector3 getHeading() { return this.heading; }
 
     private Vector3 unit(Vector3 ret) { return ret.div(ret.length()); }
