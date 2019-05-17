@@ -1,13 +1,11 @@
 package myGameEngine.actions;
 
 import javafx.beans.property.SimpleBooleanProperty;
-import myGameEngine.controller.SquishyBounceController;
 import net.java.games.input.Event;
 import ray.input.action.AbstractInputAction;
 import ray.physics.PhysicsEngine;
 import ray.physics.PhysicsObject;
 import ray.rage.scene.Node;
-import ray.rage.scene.SceneManager;
 import ray.rage.scene.SceneNode;
 import ray.rml.Matrix3;
 import ray.rml.Vector3;
@@ -21,13 +19,11 @@ public class ThrowItemAction extends AbstractInputAction {
     private SimpleBooleanProperty holding;
     private ArrayList<SceneNode> partsList;
     private PhysicsEngine pe;
-    private SquishyBounceController sc;
 
-    public ThrowItemAction(SceneNode thrower, SimpleBooleanProperty holding, ArrayList<SceneNode> partsList, PhysicsEngine pe, SquishyBounceController sc) {
+    public ThrowItemAction(SceneNode thrower, SimpleBooleanProperty holding, ArrayList<SceneNode> partsList, PhysicsEngine pe) {
         this.thrower = thrower;
         this.partsList = partsList;
         this.pe = pe;
-        this.sc = sc;
         this.holding = holding;
     }
 
@@ -63,7 +59,6 @@ public class ThrowItemAction extends AbstractInputAction {
                 physicsObject.setBounciness(0.0f);
                 physicsObject.setFriction(100.0f);
                 hold.setPhysicsObject(physicsObject);
-                sc.removeNode(hold);
                 root.attachChild(hold);
                 hold.getPhysicsObject().applyForce(
                         thrower.getLocalForwardAxis().x() * 1000,

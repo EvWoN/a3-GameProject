@@ -10,6 +10,7 @@ public class GhostAvatar {
     private UUID id;
     private SceneNode node;
     private Entity entity;
+    private Object bean;
 
     public GhostAvatar(UUID id, SceneNode node, Entity entity) {
         this.id = id;
@@ -49,7 +50,7 @@ public class GhostAvatar {
             Vector3 rightVector = heading.rotate(Degreef.createFrom(90f), Vector3f.createFrom(0, 1, 0));
             Vector3 topVector = Vector3f.createFrom(0, 1, 0);
 
-            System.out.println("Heading: " + heading + "\nRightVector: " + rightVector + "\nTopVector: " + topVector);
+            //System.out.println("Heading: " + heading + "\nRightVector: " + rightVector + "\nTopVector: " + topVector);
 
             node.setLocalRotation(Matrix3f.createFrom(rightVector, topVector, heading));
         }
@@ -66,5 +67,21 @@ public class GhostAvatar {
     @Override
     public String toString() {
         return "Obj: Ghost Avatar of UUID: " + id;
+    }
+    
+    /**
+     * Get an attached reference
+     * @return a reference to any object associated with this GhostAvatar. Caller is responsible for knowing what type of reference object is expected.
+     */
+    public Object getBean() {
+        return bean;
+    }
+    
+    /**
+     * Attach any reference you want to this GhostAvatar
+     * @param bean a reference to any object. Caller for the getter will be responsible for knowing what reference object is expected from this ghost.
+     */
+    public void setBean(Object bean) {
+        this.bean = bean;
     }
 }

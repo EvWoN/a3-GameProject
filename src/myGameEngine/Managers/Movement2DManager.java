@@ -14,6 +14,7 @@ public class Movement2DManager {
 
     private Hashtable<Node, List<MovementEvent>> nodeMovementQueueTable = new Hashtable<>();
     private Hashtable<Node, Vector3> nodeDistanceMovedTable = new Hashtable<>();
+    
     private float radiusConstraint;
     private ProtocolClient client;
 
@@ -79,6 +80,14 @@ public class Movement2DManager {
         nodeMovementQueueTable.clear();
     }
     
+    public float getRadiusConstraint() {
+        return radiusConstraint;
+    }
+    
+    public void setRadiusConstraint(float radiusConstraint) {
+        this.radiusConstraint = radiusConstraint;
+    }
+    
     /**
      * Tries to move object within radius
      * @param node Node to be moved
@@ -94,6 +103,7 @@ public class Movement2DManager {
     }
 
     public void setClient(ProtocolClient client) { this.client = client; }
+
     
     public Hashtable<Node, Vector3> getNodeDistanceMovedTable() {
         return nodeDistanceMovedTable;

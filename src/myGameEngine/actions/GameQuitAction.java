@@ -14,6 +14,10 @@ public class GameQuitAction extends AbstractInputAction {
     
     @Override
     public void performAction(float v, Event event) {
-        myGame.exit();
+        try{
+            myGame.shutdown();
+        } finally {
+            myGame.exit();
+        }
     }
 }
