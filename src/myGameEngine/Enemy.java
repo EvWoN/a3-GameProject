@@ -30,7 +30,7 @@ public class Enemy {
         this.SPEED = speed;
         this.START = start;
         this.location = calcPos(angle, START);
-        this.orbitDest = calcPos(angle, ORBIT);
+        this.orbitDest = calcPos(angle, ORBIT);//unit(location).mult(ORBIT);
         this.heading = Vector3f.createFrom(0.0f, 0.0f, 1.0f);
     }
 
@@ -38,7 +38,7 @@ public class Enemy {
         Vector3 nextMove;
         float nextAngle;
         if(!orbiting) {
-            nextMove = calcPos(angle, location.length() - (SPEED / elapsedTime));
+            nextMove = unit(location).mult(location.length() - (SPEED / elapsedTime));//calcPos(angle, location.length() - (SPEED / elapsedTime));
             if (nextMove.length() > ORBIT) {
                 location = nextMove;
             } else {
@@ -47,26 +47,28 @@ public class Enemy {
             }
         }
         else if(ammo > 0) {
-            nextAngle = angle - calcAngle(orbitDest);
-            //if(nextAngle > 0.0f) { location = calcPos(nextAngle, ORBIT); }
-            //else location = orbitDest;
             location = orbitDest;
+/*            nextAngle = angle - calcAngle(orbitDest);
+            if(nextAngle >= 360f) nextAngle -= 360f;
+            else if(nextAngle < 0.0f) nextAngle += 360f;
+            if(nextAngle > 0.0f) { location = calcPos(nextAngle, ORBIT); }
+            else location = orbitDest;*/
         }
-        else {
+        /*else {
             nextMove = targetPos.sub(location);
             nextMove = nextMove.mult(SPEED / nextMove.length());
             location = nextMove;
-        }
-
+        }*/
         if(ammo > 0 && !orbiting) heading = unit(orbitDest.sub(location));
         else heading = unit((targetPos != null) ? targetPos.sub(location) : orbitDest.sub(location));
+        angle = calcAngle(location);
         //System.out.println("Loc: " + location);
     }
 
     public void updateDestination (Vector3 target) {
         float targetAngle = (target.isZeroLength()) ? angle : calcAngle(target);
         targetPos = target;
-        orbitDest = calcPos((float) Math.toDegrees(targetAngle), ORBIT);
+        orbitDest = unit(target).mult(ORBIT);//calcPos((float) Math.toDegrees(targetAngle), ORBIT);
         System.out.println("Target Angle: " + targetAngle + " TargetPos: " + targetPos + " Destination: " + orbitDest);
     }
 
@@ -86,7 +88,7 @@ public class Enemy {
         );
     }
 
-    private float calcAngle(Vector3 pos) { return (float) Math.atan(pos.x() / pos.z()); }
+    private float calcAngle(Vector3 pos) { return (float) Math.toDegrees(Math.atan(pos.x() / pos.z())); }
 
     private void updateHeading() {
         if(ammo > 0 && !orbiting) heading = orbitDest.sub(location);
