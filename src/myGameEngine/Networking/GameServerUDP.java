@@ -137,7 +137,6 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
         });
         if(moveMessages.size() > 0)
         {
-            System.out.println("\n" + moveMessages);
             sendEnemyMoveMessage(moveMessages);
         }
     }

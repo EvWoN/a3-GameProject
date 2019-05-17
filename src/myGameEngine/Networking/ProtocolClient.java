@@ -88,7 +88,6 @@ public class ProtocolClient extends GameConnectionClient {
                             Float.parseFloat(msgTokens[7]),
                             Float.parseFloat(msgTokens[8]));
                     try {
-                        System.out.println("EnemyMove: " + ghostID);
                         createGhostAvatar(ghostID, type, ghostPosition, ghostHeading);
                     } catch (IOException e) {
                         System.out.println("Error creating ghost avatar");
@@ -148,7 +147,6 @@ public class ProtocolClient extends GameConnectionClient {
                                 Float.parseFloat(msg[6]),
                                 Float.parseFloat(msg[7])
                         );
-                        System.out.println("EnemyMove: " + enemyID);
                         try {
                             updateGhostAvatar(enemyID, pos, head);
                         } catch (IOException e) {
@@ -249,24 +247,6 @@ public class ProtocolClient extends GameConnectionClient {
         catch (IOException e) { e.printStackTrace(); }
     }
 
-    public void sendMoveItemMessage(String itemId, Vector3 pos, Vector3 head) {
-        try {
-            String message =
-                    "moveItem," +
-                    id.toString() + "," +
-                    itemId + "," +
-                    pos.x() + "," +
-                    pos.y() + "," +
-                    pos.z() + "," +
-                    head.x() + "," +
-                    head.y() + "," +
-                    head.z() + ",";
-            sendPacket(message);
-            System.out.println(message);
-        }
-        catch(IOException e) { e.printStackTrace(); }
-    }
-
     public void sendMoveMessage(Vector3 pos, Vector3 head) {
         try {
             String message =    "move," +
@@ -294,7 +274,6 @@ public class ProtocolClient extends GameConnectionClient {
     }
     
     public void sendAnimMessage(String onMove) {
-        System.out.println("Sending animation message");
         try {
             String message =
                     "anim," +
