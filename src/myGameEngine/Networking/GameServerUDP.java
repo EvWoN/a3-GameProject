@@ -12,9 +12,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetAddress;
-import java.util.HashMap;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class GameServerUDP extends GameConnectionServer<UUID> {
@@ -25,20 +23,24 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
     private Random rand;
     private ScriptEngine se;
 
-    private long totalTime, elapsedTime, lastTime, timeSec;
+    private long totalTime, elapsedTime, lastTime, timeSec, lastSec;
 
     private int SPAWNRATE, UPDATESCRIPT, //Server
                 AMMO; //Enemy
 
     private float ORBIT, SPEED, START; //Enemy
 
+    private boolean addedEnemy, updatedScripts;
+
     public GameServerUDP(int localPort) throws IOException {
         super(localPort, ProtocolType.UDP);
         lastKnownPositions = new HashMap<>();
         rand = new Random();
-        lastTime = System.currentTimeMillis();
+        lastTime = System.nanoTime();
         totalTime = 0;
+        lastSec = -1;
         enemyList = new HashMap<>();
+        addedEnemy = updatedScripts = false;
         runScript();
         setConstants();
         System.out.println("Local IP: " + InetAddress.getLocalHost() + " Port: " +localPort);
@@ -46,8 +48,6 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
             this.update();
         }
     }
-
-
 
     private void runScript() {
         ScriptEngineManager factory = new ScriptEngineManager();
@@ -83,34 +83,63 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
     }
 
     private void update() {
-        elapsedTime = System.currentTimeMillis() - lastTime;
+        ArrayList<String> moveMessages = new ArrayList<>();
+        elapsedTime = System.nanoTime() - lastTime;
+        if(elapsedTime == 0) return;
         totalTime += elapsedTime;
-        timeSec = totalTime / 1000000;
-        lastTime = System.currentTimeMillis();
-        if (timeSec % UPDATESCRIPT == 0) runScript();
-        if (timeSec % SPAWNRATE == 0) {
-            enemyList.put(
-                    UUID.randomUUID(),
-                    new Enemy(
-                            rand.nextInt(360) + rand.nextFloat(),
-                            AMMO,
-                            ORBIT,
-                            SPEED,
-                            START
-                    )
-            );
+        timeSec = totalTime / 1000000000;
+        lastTime = System.nanoTime();
+        if(lastKnownPositions.size() < 1) return;
+        if (timeSec % UPDATESCRIPT == 0)
+        {
+            if(!updatedScripts) {
+                updatedScripts = true;
+                System.out.println("Updated script.");
+                runScript();
+            }
         }
+        else updatedScripts = false;
+        if (timeSec % SPAWNRATE == 0) {
+            if(!addedEnemy && enemyList.size() < 1) {
+                System.out.println("Spawning an enemy.");
+                addedEnemy = true;
+                UUID uuid = UUID.randomUUID();
+                Enemy enemy = new Enemy(
+                        uuid,
+                        rand.nextInt(360) + rand.nextFloat(),
+                        AMMO,
+                        ORBIT,
+                        SPEED,
+                        START
+                );
+                enemyList.put(
+                        uuid,
+                        enemy
+                );
+                sendEnemy(enemy);
+            }
+        }
+        else addedEnemy = false;
         enemyList.forEach((uuid, enemy) -> {
             UUID targ = closestTarget(enemy);
             if(targ != null) {
                 enemy.updateDestination(lastKnownPositions.get(targ));
-                enemy.move();
+                enemy.move(elapsedTime);
+                //System.out.println("Enemy Loc: " + enemy.getLocation());
+                String message = createEnemyMoveMessage(enemy);
+                //System.out.println("Cons Message:" + message);
+                moveMessages.add(message);
             }
         });
+        if(moveMessages.size() > 0)
+        {
+            //System.out.println("\n" + moveMessages);
+            sendEnemyMoveMessage(moveMessages);
+        }
     }
 
     private UUID closestTarget(Enemy enemy) {
-        if(lastKnownPositions.size() < 1) return null;
+        //if(lastKnownPositions.size() < 0) return null;
         Vector3 enemyPos = enemy.getLocation();
         AtomicReference<UUID> targ = new AtomicReference<>();
         AtomicReference<Float> min = new AtomicReference<>();
@@ -124,6 +153,29 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
             }
         });
         return targ.get();
+    }
+
+    private String createEnemyMoveMessage(Enemy enemy) {
+        Vector3 position = enemy.getLocation();
+        Vector3 heading = enemy.getHeading();
+        String message =
+                "enemymove,"  +
+                enemy.getUUID().toString() + "," +
+                position.x() + "," +
+                position.y() + "," +
+                position.z() + "," +
+                heading.x() + "," +
+                heading.y() + "," +
+                heading.z() + ",";
+        //System.out.println(message);
+        return message;
+    }
+
+    private void sendEnemyMoveMessage(ArrayList<String> messages) {
+        String message = "";
+        for (String msg : messages) { message += msg + ";"; }
+        try { sendPacketToAll(message); }
+        catch (IOException e) { e.printStackTrace(); }
     }
 
     @Override
@@ -156,13 +208,13 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
                 String type = msgTokens[3];
                 String[] pos = {msgTokens[4], msgTokens[5], msgTokens[6]};
                 String[] head = { msgTokens[7], msgTokens[8], msgTokens[9] };
-                if(lastKnownPositions.containsKey(clientID))
+                if(!lastKnownPositions.containsKey(clientID))
                     lastKnownPositions.put(
                         clientID,
                         Vector3f.createFrom(
-                            Float.parseFloat(msgTokens[2]),
-                            Float.parseFloat(msgTokens[3]),
-                            Float.parseFloat(msgTokens[4])
+                            Float.parseFloat(msgTokens[4]),
+                            Float.parseFloat(msgTokens[5]),
+                            Float.parseFloat(msgTokens[6])
                         )
                     );
                 sendCreateMessages(clientID, itemID, type, pos, head);
@@ -191,6 +243,12 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
                 UUID clientID = UUID.fromString(msgTokens[1]);
                 String[] pos = { msgTokens[2], msgTokens[3], msgTokens[4] };
                 String[] head = { msgTokens[5], msgTokens[6], msgTokens[7] };
+                lastKnownPositions.put(clientID,
+                        Vector3f.createFrom(
+                                Float.parseFloat(msgTokens[2]),
+                                Float.parseFloat(msgTokens[3]),
+                                Float.parseFloat(msgTokens[4])
+                        ));
                 sendMoveMessages(clientID, pos, head);
             }
             if (msgTokens[0].compareTo("moveItem") == 0) {
@@ -326,6 +384,26 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
             String message =    "bye," +
                                 clientID.toString();
             forwardPacketToAll(message, clientID);
+        }
+        catch (IOException e) { e.printStackTrace(); }
+    }
+
+    public void sendEnemy(Enemy enemy) {
+        UUID itemID = enemy.getUUID();
+        String type = "ufo";
+        Vector3 position = enemy.getLocation();
+        Vector3 head = enemy.getHeading();
+        try {
+            String message =    "create,"  +
+                    itemID.toString() + "," +
+                    type + "," +
+                    position.x() + "," +
+                    position.y() + "," +
+                    position.z() + "," +
+                    head.x() + "," +
+                    head.y() + "," +
+                    head.z() + ",";
+            super.sendPacketToAll(message);
         }
         catch (IOException e) { e.printStackTrace(); }
     }

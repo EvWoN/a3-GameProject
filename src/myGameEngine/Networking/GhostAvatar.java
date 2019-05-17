@@ -50,7 +50,7 @@ public class GhostAvatar {
             Vector3 rightVector = heading.rotate(Degreef.createFrom(90f), Vector3f.createFrom(0, 1, 0));
             Vector3 topVector = Vector3f.createFrom(0, 1, 0);
 
-            System.out.println("Heading: " + heading + "\nRightVector: " + rightVector + "\nTopVector: " + topVector);
+            //System.out.println("Heading: " + heading + "\nRightVector: " + rightVector + "\nTopVector: " + topVector);
 
             node.setLocalRotation(Matrix3f.createFrom(rightVector, topVector, heading));
         }
