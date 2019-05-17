@@ -40,8 +40,9 @@ public class Enemy {
             nextMove = unit(location).mult(location.length() - (SPEED / elapsedTime));//calcPos(angle, location.length() - (SPEED / elapsedTime));
             if (nextMove.length() > ORBIT) {
                 location = nextMove;
-            } else {
-                location = orbitDest;
+            }
+            else {
+//                location = orbitDest;
                 orbiting = true;
             }
         }

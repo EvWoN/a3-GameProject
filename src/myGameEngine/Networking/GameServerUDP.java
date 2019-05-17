@@ -104,7 +104,7 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
         }
         else updatedScripts = false;
         if (timeSec % SPAWNRATE == 0) {
-            if(!addedEnemy && enemyList.size() < 3) {
+            if(!addedEnemy) {
                 System.out.println("Spawning an enemy.");
                 float hold;
                 do {
@@ -136,7 +136,7 @@ public class GameServerUDP extends GameConnectionServer<UUID> {
                 enemyList.forEach(new BiConsumer<UUID, Enemy>() {
                     @Override
                     public void accept(UUID uuid, Enemy enemy) {
-                        float v = enemy.getLocation().length() - vector3.length();
+                        float v = enemy.getLocation().sub(vector3).length();
                         if(v < .5f){
                             if (!toRemove.contains(enemy)) {
                                 toRemove.add(enemy);

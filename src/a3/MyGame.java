@@ -893,11 +893,12 @@ public class MyGame extends VariableFrameRateGame {
             case "astronaut": file = "astronaut.obj"; break;
             case "ufo": file = "Ufo.obj"; break;
             case "part": file = "Thruster.obj"; break;
+            case "lazor": file = "lazor.obj"; break;
         }
-        
+
         Entity ghostEntity;
         SceneNode ghostNode;
-        
+
         //Astronaut creation
         if(type.equals("astronaut")) {
             ghostEntity = rigSkeleton(type + uuid.toString(), "astronaut", "run", "jump", "idle");
@@ -906,6 +907,14 @@ public class MyGame extends VariableFrameRateGame {
             ghostNode.scale(0.3f, 0.3f, 0.3f);
             ghostNode.setLocalRotation(UP);
             setAstronautTexture(ghostEntity);
+        } else if(type.equals("lazor")){
+            ghostEntity = sm.createEntity(type + uuid.toString(), file);
+            ghostNode = sm.getRootSceneNode().createChildSceneNode(ghostEntity.getName() + "Node");
+            SceneNode lazorNode = ghostNode.createChildSceneNode(ghostEntity.getName()+"Lazor");
+            ghostEntity.setPrimitive(Primitive.TRIANGLES);
+            lazorNode.attachObject(ghostEntity);
+            lazorNode.moveUp(.5f);
+            lazorNode.setLocalScale(3f, 3f, 3f);
         } else {
             ghostEntity = sm.createEntity(type + uuid.toString(), file);
             ghostNode = sm.getRootSceneNode().createChildSceneNode(ghostEntity.getName() + "Node");
@@ -913,22 +922,22 @@ public class MyGame extends VariableFrameRateGame {
             ghostNode.attachObject(ghostEntity);
 //            ghostNode.setLocalScale(scale, scale, scale);
         }
-        
-            GhostAvatar ghostAvatar = new GhostAvatar(uuid, ghostNode, ghostEntity);
-            System.out.println("Position:: " + position + "Heading:: " + heading);
-            ghostAvatar.setPosition(position);
-            ghostAvatar.setHeading(heading);
-            
-            if(type.equals("astronaut")){
-                AstronautAnimator animatorBean = new AstronautAnimator((SkeletalEntity) ghostEntity, "run", .8f, "idle", .4f);
-                ghostAvatar.setBean(animatorBean);
-                System.out.println("Playing idle animation");
-                animatorBean.playIdleAnimation();
-            }
-        
-            System.out.println("Ghost is being created: " + ghostAvatar + " Node:" + ghostNode.toString());
-        
-            return ghostAvatar;
+
+        GhostAvatar ghostAvatar = new GhostAvatar(uuid, ghostNode, ghostEntity);
+        System.out.println("Position:: " + position + "Heading:: " + heading);
+        ghostAvatar.setPosition(position);
+        ghostAvatar.setHeading(heading);
+
+        if(type.equals("astronaut")){
+            AstronautAnimator animatorBean = new AstronautAnimator((SkeletalEntity) ghostEntity, "run", .8f, "idle", .4f);
+            ghostAvatar.setBean(animatorBean);
+            System.out.println("Playing idle animation");
+            animatorBean.playIdleAnimation();
+        }
+
+        System.out.println("Ghost is being created: " + ghostAvatar + " Node:" + ghostNode.toString());
+
+        return ghostAvatar;
     }
 
     public void updateGhostAvatar(GhostAvatar avatar, Vector3 position, Vector3 heading){
